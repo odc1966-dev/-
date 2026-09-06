@@ -1,0 +1,86 @@
+<meta charset="utf-8">
+<style>
+  @page { margin:0 }
+  html,body{margin:0;padding:0;background:#fff;width:960px;height:288px;overflow:hidden}
+  *{box-sizing:border-box}
+  #label{
+    width:960.0px;height:288.0px;background:#fff;color:#000;
+    border:6.72px solid #000;border-radius:19.2px;
+    font-family:"Liberation Sans","DejaVu Sans",Arial,sans-serif;
+    display:flex;flex-direction:column;overflow:hidden;
+    padding:12.0px 15.84px 10.08px 15.84px;
+  }
+  .top{display:flex;flex:1 1 auto;min-height:0}
+  .left{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;padding-right:13.2px}
+  .brand{font-size:29.28px;font-weight:700;letter-spacing:2.04px;line-height:1;white-space:nowrap}
+  .name{font-size:79.2px;font-weight:700;letter-spacing:-0.72px;line-height:1;white-space:nowrap;margin-top:7.2px}
+  .notes{display:flex;gap:8.16px;margin-top:auto}
+  .chip{display:flex;align-items:center;gap:5.28px;border:4.8px solid #000;border-radius:36.0px;
+        padding:0 11.52px 0 6.24px;height:70.08px}
+  .chip span{font-size:34.56px;font-weight:700;line-height:1;letter-spacing:-0.36px;white-space:nowrap}
+  .chip svg{display:block;width:51.84px;height:51.84px;flex:0 0 auto}
+  .divider{width:5.28px;background:#000;margin-right:14.88px;align-self:stretch}
+  .right{flex:0 0 auto;display:flex;flex-direction:column;justify-content:space-between;padding:0.48px 0 2.88px 0}
+  .spec{font-size:43.2px;font-weight:700;line-height:1;white-space:nowrap;letter-spacing:-0.48px}
+  .bottom{display:flex;align-items:center;gap:16.8px;border-top:5.28px solid #000;
+          margin-top:7.68px;padding-top:7.2px;height:54.72px}
+  .sub{font-size:31.2px;font-weight:700;line-height:1;white-space:nowrap}
+  .roast{margin-left:auto;display:flex;align-items:center;gap:10.8px}
+  .roast b{font-size:31.2px;font-weight:700;line-height:1}
+  .blank{width:244.8px;height:5.28px;background:#000;align-self:center;margin-top:14.4px}
+</style>
+<div id="label">
+  <div class="top">
+    <div class="left">
+      <div class="brand">HYTTE ROASTERY</div>
+      <div class="name">PERU GEISHA</div>
+      <div class="notes">
+        <div class="chip">
+          <svg viewBox="0 0 24 24">
+            <g fill="#000">
+              <g transform="translate(12,13)">
+                <path d="M0 0 C-2.3 -4.4 -1.9 -8.6 0 -11.6 C1.9 -8.6 2.3 -4.4 0 0 Z"/>
+                <path d="M0 0 C-2.3 -4.4 -1.9 -8.6 0 -11.6 C1.9 -8.6 2.3 -4.4 0 0 Z" transform="rotate(72)"/>
+                <path d="M0 0 C-2.3 -4.4 -1.9 -8.6 0 -11.6 C1.9 -8.6 2.3 -4.4 0 0 Z" transform="rotate(144)"/>
+                <path d="M0 0 C-2.3 -4.4 -1.9 -8.6 0 -11.6 C1.9 -8.6 2.3 -4.4 0 0 Z" transform="rotate(216)"/>
+                <path d="M0 0 C-2.3 -4.4 -1.9 -8.6 0 -11.6 C1.9 -8.6 2.3 -4.4 0 0 Z" transform="rotate(288)"/>
+              </g>
+            </g>
+            <circle cx="12" cy="13" r="2.5" fill="#fff"/>
+            <circle cx="12" cy="13" r="1.15" fill="#000"/>
+          </svg>
+          <span>LILY</span>
+        </div>
+        <div class="chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.85" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9.1"/>
+            <path d="M12 12 L12 3.4"/><path d="M12 12 L19.4 7.7"/><path d="M12 12 L19.4 16.3"/>
+            <path d="M12 12 L12 20.6"/><path d="M12 12 L4.6 16.3"/><path d="M12 12 L4.6 7.7"/>
+            <circle cx="12" cy="12" r="1.1" fill="#000" stroke="none"/>
+          </svg>
+          <span>CITRUS</span>
+        </div>
+        <div class="chip">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 6.0 L12 2.6" stroke="#000" stroke-width="1.9" stroke-linecap="round"/>
+            <ellipse cx="12" cy="14.0" rx="8.3" ry="7.9" fill="#000"/>
+            <path d="M8.6 9.0 C10.4 11.6 10.0 15.6 8.4 18.6" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M13.4 8.9 C14.8 12.0 14.2 15.8 12.9 18.8" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <span>RAISIN</span>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="right">
+      <div class="spec">CAJAMARCA</div>
+      <div class="spec">EL MORITO</div>
+      <div class="spec">WASHED</div>
+      <div class="spec">LIGHT</div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="sub">LENIN FLORES &middot; 2,000m</div>
+    <div class="roast"><b>ROASTED</b><div class="blank"></div></div>
+  </div>
+</div>
