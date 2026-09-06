@@ -1,0 +1,25 @@
+{
+  "name": "원두 보관 라벨 메이커",
+  "short_name": "원두라벨",
+  "description": "사진 한 장으로 원두 보관 라벨을 만들고 P15 라벨 프린터로 바로 인쇄합니다.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#111111",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [{ "name": "photos", "accept": ["image/*"] }]
+    }
+  }
+}
