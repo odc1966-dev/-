@@ -7,84 +7,81 @@
     border:6px solid #000;border-radius:17px;
     font-family:"Liberation Sans","DejaVu Sans",Arial,sans-serif;
     display:flex;flex-direction:column;overflow:hidden;
-    padding:13px 17px 11px 17px;
+    padding:12px 17px 10px 17px;
   }
-  .top{display:flex;flex:1 1 auto;min-height:0}
+  .r1{display:flex;align-items:center;justify-content:space-between;height:30px}
+  .brand{font-size:28px;font-weight:700;letter-spacing:2.6px;line-height:1}
+  .proc{font-size:32px;font-weight:700;letter-spacing:0.4px;line-height:1}
 
-  .left{width:606px;flex:0 0 606px;display:flex;flex-direction:column}
-  .brand{font-size:27px;font-weight:700;letter-spacing:2.6px;line-height:1}
-  .name{font-size:86px;font-weight:700;letter-spacing:-1.2px;line-height:1;margin-top:8px;white-space:nowrap}
-  .notes{display:flex;gap:10px;margin-top:auto}
-  .chip{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;
-        border:4.5px solid #000;border-radius:34px;height:68px}
-  .chip span{font-size:33px;font-weight:700;line-height:1;letter-spacing:-0.4px}
-  .chip svg{display:block;width:45px;height:45px;flex:0 0 auto}
+  .r2{display:flex;align-items:flex-end;justify-content:space-between;height:92px;margin-top:3px}
+  .origin{font-size:92px;font-weight:700;letter-spacing:-1.5px;line-height:1;white-space:nowrap}
+  .place{text-align:right;line-height:1;margin-bottom:15px}
+  .place div{font-size:34px;font-weight:700;line-height:1;white-space:nowrap}
+  .place div+div{margin-top:7px}
 
-  .rule{width:5px;background:#000;margin:0 18px;align-self:stretch}
-
-  .right{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between;padding:2px 0 4px}
-  .spec{font-size:42px;font-weight:700;line-height:1;white-space:nowrap;letter-spacing:-0.6px}
+  .notes{display:flex;gap:12px;height:66px;margin-top:8px}
+  .chip{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:10px;
+        border:4.5px solid #000;border-radius:32px}
+  .chip span{font-size:40px;font-weight:700;line-height:1;letter-spacing:-0.5px}
+  .chip svg{display:block;width:46px;height:46px;flex:0 0 auto}
 
   .bottom{display:flex;align-items:center;gap:14px;border-top:5px solid #000;
-          margin-top:10px;padding-top:8px;height:48px}
+          margin-top:7px;padding-top:9px;height:46px}
   .bottom b{font-size:33px;font-weight:700;line-height:1;letter-spacing:0.6px}
   .blank{flex:1 1 auto;height:5px;background:#000;margin-top:20px}
 </style>
 <div id="label">
-  <div class="top">
-    <div class="left">
-      <div class="brand">HYTTE ROASTERY</div>
-      <div class="name">PERU GEISHA</div>
-      <div class="notes">
 
-        <div class="chip">
-          <svg viewBox="0 0 24 24">
-            <g fill="#000" transform="translate(12,12.4)">
-              <path id="p" d="M0 0 C-2.35 -4.3 -2.0 -8.5 0 -11.5 C2.0 -8.5 2.35 -4.3 0 0 Z"/>
-              <use href="#p" transform="rotate(72)"/><use href="#p" transform="rotate(144)"/>
-              <use href="#p" transform="rotate(216)"/><use href="#p" transform="rotate(288)"/>
-            </g>
-            <circle cx="12" cy="12.4" r="2.6" fill="#fff"/>
-            <circle cx="12" cy="12.4" r="1.2" fill="#000"/>
-          </svg>
-          <span>LILY</span>
-        </div>
+  <div class="r1">
+    <div class="brand">HYTTE ROASTERY</div>
+    <div class="proc">WASHED</div>
+  </div>
 
-        <div class="chip">
-          <svg viewBox="0 0 24 24">
-            <g fill="none" stroke="#000" stroke-width="1.9" stroke-linecap="round">
-              <circle cx="12" cy="12" r="9.4"/>
-              <path d="M12 12 L12 3.6"/><path d="M12 12 L19.3 7.8"/><path d="M12 12 L19.3 16.2"/>
-              <path d="M12 12 L12 20.4"/><path d="M12 12 L4.7 16.2"/><path d="M12 12 L4.7 7.8"/>
-            </g>
-            <circle cx="12" cy="12" r="1.4" fill="#000"/>
-          </svg>
-          <span>CITRUS</span>
-        </div>
+  <div class="r2">
+    <div class="origin">PERU</div>
+    <div class="place">
+      <div>CAJAMARCA</div>
+      <div>EL MORITO</div>
+    </div>
+  </div>
 
-        <div class="chip">
-          <svg viewBox="0 0 24 24">
-            <g fill="none" stroke="#000" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 5.9 L12 2.6"/>
-              <path d="M12 5.9 C17.2 6.9 20.7 10.4 20.7 14.2 C20.7 18.4 16.8 21.5 12 21.5
-                       C7.2 21.5 3.3 18.4 3.3 14.2 C3.3 10.4 6.8 6.9 12 5.9 Z"/>
-              <path d="M9.0 10.0 C10.6 12.4 10.3 15.6 8.9 18.2"/>
-              <path d="M14.4 10.4 C13.4 13.0 13.7 16.0 14.8 18.2"/>
-            </g>
-          </svg>
-          <span>RAISIN</span>
-        </div>
-
-      </div>
+  <div class="notes">
+    <div class="chip">
+      <svg viewBox="0 0 24 24">
+        <g fill="#000" transform="translate(12,12.4)">
+          <path id="p" d="M0 0 C-2.35 -4.3 -2.0 -8.5 0 -11.5 C2.0 -8.5 2.35 -4.3 0 0 Z"/>
+          <use href="#p" transform="rotate(72)"/><use href="#p" transform="rotate(144)"/>
+          <use href="#p" transform="rotate(216)"/><use href="#p" transform="rotate(288)"/>
+        </g>
+        <circle cx="12" cy="12.4" r="2.6" fill="#fff"/>
+        <circle cx="12" cy="12.4" r="1.2" fill="#000"/>
+      </svg>
+      <span>LILY</span>
     </div>
 
-    <div class="rule"></div>
+    <div class="chip">
+      <svg viewBox="0 0 24 24">
+        <g fill="none" stroke="#000" stroke-width="1.9" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9.4"/>
+          <path d="M12 12 L12 3.6"/><path d="M12 12 L19.3 7.8"/><path d="M12 12 L19.3 16.2"/>
+          <path d="M12 12 L12 20.4"/><path d="M12 12 L4.7 16.2"/><path d="M12 12 L4.7 7.8"/>
+        </g>
+        <circle cx="12" cy="12" r="1.4" fill="#000"/>
+      </svg>
+      <span>CITRUS</span>
+    </div>
 
-    <div class="right">
-      <div class="spec">CAJAMARCA</div>
-      <div class="spec">EL MORITO</div>
-      <div class="spec">WASHED</div>
-      <div class="spec">LIGHT</div>
+    <div class="chip">
+      <svg viewBox="0 0 24 24">
+        <g fill="none" stroke="#000" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5.9 L12 2.6"/>
+          <path d="M12 5.9 C17.2 6.9 20.7 10.4 20.7 14.2 C20.7 18.4 16.8 21.5 12 21.5
+                   C7.2 21.5 3.3 18.4 3.3 14.2 C3.3 10.4 6.8 6.9 12 5.9 Z"/>
+          <path d="M9.0 10.0 C10.6 12.4 10.3 15.6 8.9 18.2"/>
+          <path d="M14.4 10.4 C13.4 13.0 13.7 16.0 14.8 18.2"/>
+        </g>
+      </svg>
+      <span>RAISIN</span>
     </div>
   </div>
 
