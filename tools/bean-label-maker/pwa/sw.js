@@ -1,5 +1,5 @@
 /* 원두 라벨 메이커 — 오프라인 캐시 + 안드로이드 공유 대상 수신 */
-const CACHE = 'beanlabel-v1';
+const CACHE = 'beanlabel-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const SHARE = 'beanlabel-shared';
 
@@ -36,6 +36,15 @@ self.addEventListener('fetch', e => {
   }
 
   if (e.request.method !== 'GET') return;
+
+  if (e.request.mode === 'navigate'){                 // 페이지 자체는 항상 최신을 먼저
+    e.respondWith(fetch(e.request).then(res => {
+      const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy));
+      return res;
+    }).catch(() => caches.match('./index.html')));
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
       if (res.ok && url.origin === location.origin) {
