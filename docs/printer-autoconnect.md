@@ -1,142 +1,69 @@
-# 라벨 프린터 자동연결 · 무인 인쇄 (Android)
+# P15 라벨 프린터 — 자동연결 · 직접 인쇄
 
-## 0. 현재 상태
+## 확인된 기기 정보
 
-| 단계 | 상태 |
+| 항목 | 값 |
 |---|---|
-| ① 원두 정보 입력 → 라벨 PNG 자동 생성 | **완료** (`bean-label-maker.html`) |
-| ② 저장 → 공유 → Deli 앱 인쇄 | 지금 바로 사용 가능 (탭 2~3회) |
-| ③ 앱 실행 → 프린터 자동연결 → 자동 인쇄 | **프린터 모델·프로토콜 확인 필요** |
+| 모델 | **P15** (Label Printer) |
+| 제조사 | Shenzhen Yinxiaoqian Technology Co., Ltd (印小千) |
+| BLE 이름 | `P15_Z4C9F_BLE` |
+| 펌웨어 | V1.08K · SN P15AW24170296 |
+| FCC ID | 2A2AI-M1 |
 
-③은 프린터가 쓰는 BLE 명령 규격을 모르면 코드를 확정할 수 없습니다.
-아래 A에서 그 규격을 확보하고, B의 골격에 인코더만 채우면 완성됩니다.
+앱 패키지 `com.feioou.deliprint.yxq` 의 **yxq = YinXiaoQian**, 즉 이 제조사 전용 빌드입니다.
+(앞서 언급했던 "Deli SDK" 경로는 해당 없음 — 정정합니다.)
 
----
+## 프로토콜 (확인 완료)
 
-## A. 프로토콜 확보 — 30분이면 끝나는 절차
+P15는 **L11 계열 래스터 프로토콜**을 사용합니다. 오픈소스 구현
+[tomLadder/thermoprint](https://github.com/tomLadder/thermoprint) (MIT) 의 P15 디바이스
+프로필과 일치하며, 그 프로필의 **기본 라벨 크기가 40 × 12 mm** 로 우리가 만든 라벨과 같습니다.
 
-### A-1. 모델명 확인
-프린터 바닥 라벨 또는 Deli 앱 → 기기 정보. (예: DL-886A / DL-888B / DL-720W …)
-모델명만 알려주셔도 아래 B의 상수 대부분을 좁힐 수 있습니다.
+| 항목 | 값 |
+|---|---|
+| Service | `0000ff00-0000-1000-8000-00805f9b34fb` |
+| TX (쓰기, no-response) | `0000ff02-…` |
+| RX (알림, 상태) | `0000ff01-…` |
+| CX (알림, 크레딧 흐름제어) | `0000ff03-…` |
+| 패킷 크기 / 전송 간격 | 95 byte / 30 ms (1틱 1패킷) |
+| 해상도 | 8 dot/mm = 203 dpi → 40×12mm = **320 × 96 dot** |
+| 라벨 이름 접두어 | P15, P15R, P15S, LP15, S15, P7, M1 … |
 
-### A-2. BLE 서비스·특성 UUID 확인 — nRF Connect (무료 앱)
-1. Play스토어에서 **nRF Connect for Mobile** 설치
-2. 프린터 전원 ON → SCAN → 프린터 이름 선택 → CONNECT
-3. 나오는 **Service UUID**와, 그 아래 **Characteristic UUID + 속성(WRITE / WRITE NO RESPONSE / NOTIFY)** 화면을 캡처
-   - 보통 쓰기 1개(WRITE NO RESPONSE)와 알림 1개(NOTIFY) 조합입니다.
-   - 흔한 값: `0000ff00-…`, `0000ffe0-…`, `49535343-…`(Microchip 투명 UART), `6e400001-…`(Nordic UART)
-
-### A-3. 실제 인쇄 명령 캡처 — HCI 스누프 로그
-1. 안드로이드 **개발자 옵션 → 블루투스 HCI 스누프 로그 사용** ON (기기에 따라 재부팅 필요)
-2. **Deli 앱으로 라벨 1장 인쇄** (반드시 성공적으로 1장만)
-3. 개발자 옵션 → **버그 신고서 작성**(또는 `/sdcard/Android/data/.../btsnoop_hci.log`) 으로 로그 추출
-4. 그 파일을 주시면 ATT Write 패킷에서 **헤더 · 래스터 인코딩 · 종료 명령**을 뽑아 인코더를 작성합니다.
-
-> 참고: 40 × 12 mm 라벨을 203dpi로 찍으면 **320 × 96 dot**, 1bpp(흑백 1비트) 래스터 = 한 줄 12바이트 × 96줄 형태가 표준입니다. 만들어드린 `320 × 96 px` PNG가 그대로 들어갑니다.
-
-### A-4. 정식 경로 (병행 권장)
-Deli/Feioou는 파트너에게 **라벨 프린터 SDK(Android aar)** 를 제공합니다.
-`support@delicloud.com` 또는 국내 총판에 모델명과 함께 SDK 요청 메일을 보내면
-리버스 엔지니어링 없이 A-2/A-3을 건너뛸 수 있습니다.
-
----
-
-## B. 자동연결 골격 (Kotlin, 검증 전 코드)
-
-> Android SDK가 이 환경에 없어 **컴파일·실기 테스트는 하지 못했습니다.**
-> 구조 참고용이며, A 완료 후 `buildPrintPayload()` 를 채우고 함께 다듬으면 됩니다.
-
-```kotlin
-// BleAutoPrinter.kt  —  "앱 켜면 알아서 붙는다"의 핵심은 autoConnect = true + MAC 기억
-class BleAutoPrinter(private val ctx: Context) {
-
-    companion object {
-        // ↓ A-2에서 확인한 값으로 교체
-        val SVC   = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb")
-        val WRITE = UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb")
-        val NOTIFY= UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb")
-        const val PREF = "printer_mac"
-    }
-
-    private var gatt: BluetoothGatt? = null
-    private var wch: BluetoothGattCharacteristic? = null
-    private val sp = ctx.getSharedPreferences("ble", Context.MODE_PRIVATE)
-
-    /** 앱 시작 시 1회 호출. 저장된 MAC이 있으면 스캔 없이 바로 재연결 시도 */
-    fun autoConnect(onReady: () -> Unit) {
-        val mac = sp.getString(PREF, null) ?: return scanOnce(onReady)
-        val dev = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mac)
-        // autoConnect=true : 프린터가 꺼져 있어도 켜지는 순간 OS가 알아서 붙여줌 (핵심)
-        gatt = dev.connectGatt(ctx, /* autoConnect = */ true, cb, BluetoothDevice.TRANSPORT_LE)
-    }
-
-    /** 최초 1회만: 이름으로 찾아 MAC을 저장해 두면 이후부터는 자동 */
-    private fun scanOnce(onReady: () -> Unit) {
-        val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
-        scanner.startScan(null, ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
-            object : ScanCallback() {
-                override fun onScanResult(t: Int, r: ScanResult) {
-                    val name = r.device.name ?: return
-                    if (!name.contains("DL", true) && !name.contains("Deli", true)) return
-                    scanner.stopScan(this)
-                    sp.edit().putString(PREF, r.device.address).apply()
-                    gatt = r.device.connectGatt(ctx, true, cb, BluetoothDevice.TRANSPORT_LE)
-                }
-            })
-    }
-
-    private val cb = object : BluetoothGattCallback() {
-        override fun onConnectionStateChange(g: BluetoothGatt, s: Int, newState: Int) {
-            when (newState) {
-                BluetoothProfile.STATE_CONNECTED    -> g.requestMtu(247)   // 큰 MTU = 인쇄 빠름
-                BluetoothProfile.STATE_DISCONNECTED -> g.connect()         // 끊기면 무한 자동 재연결
-            }
-        }
-        override fun onMtuChanged(g: BluetoothGatt, mtu: Int, st: Int) { g.discoverServices() }
-        override fun onServicesDiscovered(g: BluetoothGatt, st: Int) {
-            wch = g.getService(SVC)?.getCharacteristic(WRITE)
-            g.getService(SVC)?.getCharacteristic(NOTIFY)?.let {
-                g.setCharacteristicNotification(it, true)
-                it.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))?.apply {
-                    value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE; g.writeDescriptor(this)
-                }
-            }
-            /* 준비 완료 → 대기 중이던 인쇄 작업 실행 */
-        }
-    }
-
-    /** 라벨 Bitmap(320 × 96) → 프린터 명령 바이트열
-     *  ★ A-3 로그 분석 후 이 함수만 채우면 끝 */
-    private fun buildPrintPayload(bmp: Bitmap): List<ByteArray> = TODO("HCI 로그 기반 인코딩")
-
-    fun print(bmp: Bitmap) {
-        val ch = wch ?: return
-        for (chunk in buildPrintPayload(bmp)) {
-            ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            ch.value = chunk
-            gatt?.writeCharacteristic(ch)
-            Thread.sleep(12)   // 흐름 제어: NOTIFY ack 방식이면 그쪽으로 대체
-        }
-    }
-}
+### 인쇄 명령 순서
 ```
-
-### 필수 매니페스트/런타임 권한
-```xml
-<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-    android:usesPermissionFlags="neverForLocation" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+10 FF 10 00 TT        농도(thickness) 설정          TT=1~5 (기본 2)
+00 × 15               wakeup
+10 FF F1 02           엔진 활성화
+1D 76 30 00 WL WH HL HH + 래스터   비트맵 (W=행당 바이트수 LE16, H=줄수 LE16)
+1D 0C                 다음 라벨 갭까지 이송
+10 FF F1 45           세션 종료
 ```
-+ **설정 → 앱 → 배터리 → 제한 없음** 으로 두어야 백그라운드 연결이 유지됩니다.
+- 래스터는 **1bpp, MSB first, 1 = 검정**, 행 단위 바이트 정렬
+- 라벨은 **90° 회전**해서 보냄 (96 dot 폭 × 320 dot 길이 → 행당 12 byte × 320줄 = 3,840 byte)
+- CX로 `01 NN` 이 오면 크레딧 +NN. 크레딧이 있을 때만 패킷 전송, 1초 이상 굶으면 1개 강제 회복
+- RX 상태 코드: `FF 01` 용지없음 · `FF 02` 커버열림 · `FF 03` 과열 · `FF 04` 배터리부족
 
----
+## 구현 결과
 
-## C. 코드 없이 지금 바로 반자동으로 쓰는 법
+`bean-label-maker.html` 에 **[프린터로 인쇄]** 버튼을 넣었습니다. Web Bluetooth로
+직접 연결·전송하므로 **Deli(印小千) 앱을 거치지 않습니다.**
 
-1. `bean-label-maker.html` 로 라벨 생성 → **길게 눌러 이미지 저장**
-2. 갤러리 → **공유 → Deli 앱**
-3. Deli 앱은 마지막 프린터로 자동 재연결되므로 **인쇄 버튼 1회**
+- 첫 1회만 기기 선택 → 이후 `navigator.bluetooth.getDevices()` 로 **선택창 없이 자동 재연결**
+- 연결 끊김 감지 후 다음 인쇄 때 자동 재연결
+- 농도(1~5) · 매수(1~5) · 180° 뒤집기 지원, 전송 진행률 %와 프린터 상태 표시
 
-여기에 **MacroDroid** 매크로(트리거: 블루투스 기기 연결됨 = 프린터 → 액션: 앱 실행)를
-얹으면 프린터 전원만 켜도 앱이 뜹니다.
+### 검증한 것 / 못한 것
+- ✅ 생성되는 바이트열을 헤드리스 브라우저에서 실제로 확인:
+  preamble 24 byte, 비트맵 헤더 `1d 76 30 00 0c 00 40 01`(=12 byte/행, 320줄),
+  총 3,878 byte · 42 패킷 · 패킷 최대 95 byte — 레퍼런스 구현과 일치
+- ✅ 전송되는 1bpp 래스터를 되돌려 렌더링해 글자 깨짐 없음 확인
+- ❌ **실제 P15 장비로는 인쇄해보지 못했습니다** (여기에 하드웨어가 없음).
+  방향이 뒤집혀 나오면 **방향 → 180° 뒤집기**, 너무 흐리면 **농도 3~4** 로 조정하세요.
+
+## 사용 조건 (중요)
+
+1. **안드로이드 Chrome** (Web Bluetooth 지원). 삼성 인터넷·iOS Safari는 미지원.
+2. **보안 컨텍스트(https:// 또는 localhost)** 가 필요합니다.
+   `file://` 로 열었을 때 블루투스가 막히면 → GitHub Pages 등 https 주소로 올려 사용하세요.
+3. 프린터 앱의 **자동 꺼짐 20분** 설정 때문에 오래 두면 잠듭니다. 전원 버튼으로 깨운 뒤 인쇄하세요.
+4. 기존 방식(PNG 저장 → 공유 → 인쇄)도 그대로 남아 있습니다.

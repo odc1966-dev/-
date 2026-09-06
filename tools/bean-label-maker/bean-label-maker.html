@@ -72,10 +72,20 @@
     <img id="out" alt="라벨 미리보기">
     <div class="warn" id="warn"></div>
     <div class="btns" style="margin-top:12px;justify-content:center">
-      <button id="save">PNG 저장</button>
-      <button class="ghost" id="actual">실제 크기로 보기</button>
+      <button id="print">프린터로 인쇄</button>
+      <button class="ghost" id="save">PNG 저장</button>
+      <button class="ghost" id="actual">실제 크기</button>
     </div>
-    <p class="hint" style="margin-top:10px">저장이 막히면 라벨 이미지를 <b>길게 눌러 "이미지 저장"</b> 하세요.<br>
+    <div class="row" style="margin-top:10px;max-width:420px;margin-left:auto;margin-right:auto">
+      <div class="field"><label>농도</label><select id="dens">
+        <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="field"><label>매수</label><select id="copies">
+        <option selected>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="field"><label>방향</label><select id="rot">
+        <option value="0" selected>기본</option><option value="180">180° 뒤집기</option></select></div>
+    </div>
+    <div id="st" class="hint" style="font-weight:700;min-height:18px"></div>
+    <p class="hint" style="margin-top:10px"><b>프린터로 인쇄</b>는 안드로이드 Chrome에서 동작합니다(Web Bluetooth). 첫 1회만 기기를 선택하면 이후에는 바로 연결됩니다.<br>저장이 막히면 라벨 이미지를 <b>길게 눌러 "이미지 저장"</b> 하세요.<br>
       저장 후 갤러리 → 공유 → 라벨 프린터 앱으로 보내면 바로 인쇄됩니다.</p>
     <div class="field" style="margin-top:10px;max-width:260px;margin-left:auto;margin-right:auto">
       <label>저장 해상도</label>
@@ -418,6 +428,134 @@ $('psave').onclick = () => { const n = $('pname').value.trim() || ($('origin').v
 $('pload').onclick = () => { const p = presets(), k = $('plist').value; if (p[k]){ load(p[k]); render(); } };
 $('pdel').onclick = () => { const p = presets(), k = $('plist').value; if (k && p[k]){ delete p[k];
   localStorage.setItem('beanlabel:presets', JSON.stringify(p)); refresh(); } };
+
+/* ============================================================
+   P15 직접 인쇄 (Web Bluetooth · L11 프로토콜)
+   프로토콜 참고: github.com/tomLadder/thermoprint (MIT)
+   ============================================================ */
+const P15 = {
+  svc:'0000ff00-0000-1000-8000-00805f9b34fb',
+  rxU:'0000ff01-0000-1000-8000-00805f9b34fb',   // notify  : 상태
+  txU:'0000ff02-0000-1000-8000-00805f9b34fb',   // write   : 데이터
+  cxU:'0000ff03-0000-1000-8000-00805f9b34fb',   // notify  : 크레딧(흐름제어)
+  prefixes:['P15','P15R','P15S','LP15','S15','P7','M1','iSPACE_LP15'],
+  packet:95, tick:30, starve:1000
+};
+const STATUS = {1:'용지 없음',2:'커버 열림',3:'과열',4:'배터리 부족',5:'커버 닫힘'};
+const B = { dev:null, tx:null, credits:0, lastCredit:0, busy:false };
+const st = m => { $('st').textContent = m; };
+
+function creditIn(d){
+  if(d[0]===0x01){ B.credits += d[1]; B.lastCredit = Date.now(); }
+}
+function statusIn(d){
+  if(d[0]===0xff && STATUS[d[1]]) st('프린터: ' + STATUS[d[1]]);
+}
+
+async function connect(force){
+  if(!navigator.bluetooth){ st('이 브라우저는 블루투스를 지원하지 않습니다 (안드로이드 Chrome 사용)'); return null; }
+  let dev = B.dev;
+  if(!dev && !force && navigator.bluetooth.getDevices){          // 이전에 허용한 기기 → 선택창 없이 재연결
+    const list = await navigator.bluetooth.getDevices().catch(()=>[]);
+    dev = list.find(d => P15.prefixes.some(p => (d.name||'').toUpperCase().startsWith(p))) || null;
+  }
+  if(!dev || force){
+    st('프린터를 선택하세요…');
+    dev = await navigator.bluetooth.requestDevice({
+      filters: P15.prefixes.map(p => ({ namePrefix:p })),
+      optionalServices:[P15.svc]
+    });
+  }
+  B.dev = dev;
+  dev.addEventListener('gattserverdisconnected', () => { B.tx = null; st('프린터 연결 끊김 (전원을 켜면 다시 연결됩니다)'); });
+  st('연결 중…');
+  const server = await dev.gatt.connect();
+  const svc = await server.getPrimaryService(P15.svc);
+  B.tx = await svc.getCharacteristic(P15.txU);
+  const rx = await svc.getCharacteristic(P15.rxU).catch(()=>null);
+  if(rx){ await rx.startNotifications();
+    rx.addEventListener('characteristicvaluechanged', e => statusIn(new Uint8Array(e.target.value.buffer))); }
+  const cx = await svc.getCharacteristic(P15.cxU).catch(()=>null);
+  if(cx){ await cx.startNotifications();
+    cx.addEventListener('characteristicvaluechanged', e => creditIn(new Uint8Array(e.target.value.buffer)));
+    const t0 = Date.now();                                        // 초기 크레딧 대기
+    while(B.credits <= 0 && Date.now()-t0 < 2000) await new Promise(r=>setTimeout(r,50));
+  }
+  st('연결됨: ' + (dev.name||'P15'));
+  return B.tx;
+}
+
+async function sendChunked(bytes, onProg){
+  let off = 0;
+  while(off < bytes.length){
+    if(B.credits <= 0 && Date.now()-B.lastCredit >= P15.starve){ B.credits = 1; B.lastCredit = Date.now(); }
+    if(B.credits > 0){
+      const end = Math.min(off + P15.packet, bytes.length);
+      await B.tx.writeValueWithoutResponse(bytes.slice(off, end).buffer);
+      B.credits--; off = end; if(onProg) onProg(off);
+    }
+    await new Promise(r => setTimeout(r, P15.tick));
+  }
+}
+
+/* 라벨 → 1bpp 래스터 (프린터는 12mm 폭이 가로가 되도록 90° 회전해서 받는다) */
+function raster(rot180){
+  drawLabel(320);                                   // 40x12mm @203dpi = 320x96
+  const src = cv, r = document.createElement('canvas');
+  r.width = src.height; r.height = src.width;       // 96 x 320
+  const c = r.getContext('2d');
+  if(rot180){ c.translate(r.width, r.height); c.rotate(Math.PI); }
+  c.translate(r.width, 0); c.rotate(Math.PI/2); c.drawImage(src, 0, 0);
+  const px = c.getImageData(0,0,r.width,r.height).data;
+  const bpr = Math.ceil(r.width/8), out = new Uint8Array(bpr * r.height);
+  for(let y=0; y<r.height; y++) for(let x=0; x<r.width; x++){
+    const i = (y*r.width+x)*4, a = px[i+3]/255;
+    const g = (px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114)*a + 255*(1-a);
+    if(g < 128) out[y*bpr + (x>>3)] |= 0x80 >> (x&7);   // 1 = 검정
+  }
+  drawLabel(960);
+  return { data:out, bpr:bpr, h:r.height };
+}
+
+function seq(img, density){
+  const cmds = [
+    Uint8Array.from([0x10,0xff,0x10,0x00, density & 0xff]),   // 농도(thickness)
+    new Uint8Array(15),                                        // wakeup
+    Uint8Array.from([0x10,0xff,0xf1,0x02])                     // enable
+  ];
+  const head = Uint8Array.from([0x1d,0x76,0x30,0x00,
+    img.bpr & 0xff, (img.bpr>>8)&0xff, img.h & 0xff, (img.h>>8)&0xff]);
+  const bulk = [head, img.data,
+    Uint8Array.from([0x1d,0x0c]),                              // 다음 라벨 갭까지 이송
+    Uint8Array.from([0x10,0xff,0xf1,0x45])];                   // stop
+  const join = a => { const n = a.reduce((s,d)=>s+d.length,0), o = new Uint8Array(n);
+    let k=0; a.forEach(d=>{o.set(d,k); k+=d.length;}); return o; };
+  return { pre: join(cmds), bulk: join(bulk) };
+}
+
+$('print').onclick = async () => {
+  if(B.busy) return;
+  try{
+    B.busy = true;
+    if(!B.tx || !B.dev?.gatt?.connected) await connect(false);
+    if(!B.tx){ B.busy = false; return; }
+    const n = parseInt($('copies').value,10), dens = parseInt($('dens').value,10);
+    const img = raster($('rot').value === '180');
+    const s = seq(img, dens), total = s.pre.length + s.bulk.length;
+    for(let i=1; i<=n; i++){
+      st('인쇄 중 ' + i + '/' + n + ' …');
+      await sendChunked(s.pre);
+      const t0 = Date.now();
+      while(B.credits <= 0 && Date.now()-t0 < 1500) await new Promise(r=>setTimeout(r,30));
+      await sendChunked(s.bulk, sent => st('인쇄 중 ' + i + '/' + n + ' · ' +
+        Math.round((s.pre.length + sent) / total * 100) + '%'));
+      await new Promise(r=>setTimeout(r,400));
+    }
+    st('인쇄 완료 (' + n + '장)');
+  }catch(e){
+    st('오류: ' + (e && e.message ? e.message : e));
+  }finally{ B.busy = false; }
+};
 
 try{ const last = localStorage.getItem('beanlabel:last'); if (last) load(JSON.parse(last)); }catch(e){}
 refresh(); render();
