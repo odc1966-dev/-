@@ -36,6 +36,10 @@
   .presetrow{display:flex;gap:8px;align-items:center;margin-top:8px}
   input[type=checkbox]{width:auto;margin-right:7px;transform:scale(1.25)}
   .chk{display:flex;align-items:center;font-size:13.5px;font-weight:700;color:#333;margin-top:10px}
+  .stat{display:none;margin-top:10px;padding:11px 12px;border-radius:9px;
+    background:#f0eee8;border:1.5px solid var(--line);font-size:13.5px;font-weight:700;line-height:1.4}
+  .stat.on{display:block}
+  .stat.bad{background:#fdeceb;border-color:#e5b4ae;color:#8a1f11}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .thumbs div{position:relative}
   .thumbs img{width:74px;height:74px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line)}
@@ -60,17 +64,17 @@
     <div class="btns">
       <button class="ghost sm" id="pick">사진 선택</button>
       <button class="ghost sm" id="cam">카메라 촬영</button>
-      <button class="sm" id="ai">분석 → 라벨 만들기</button>
+      <button class="sm" id="ai">다시 분석</button>
     </div>
     <input id="files" type="file" accept="image/*" multiple hidden>
     <input id="camf" type="file" accept="image/*" capture="environment" hidden>
     <div class="thumbs" id="thumbs"></div>
-    <div id="aist" class="hint" style="font-weight:700;min-height:17px;margin-top:8px"></div>
+    <div id="aist" class="stat"></div>
     <label class="chk"><input type="checkbox" id="autoprint">분석이 끝나면 바로 인쇄</label>
-    <p class="hint">봉투 앞·뒷면, 설명서, 로스팅 날짜 스티커를 함께 넣으면 정확도가 올라갑니다.
+    <p class="hint">사진을 넣으면 자동으로 분석됩니다. 봉투 앞·뒷면, 설명서, 로스팅 날짜 스티커를 함께 넣으면 정확도가 올라갑니다.
       사진에 없는 정보는 비워 둡니다(추측하지 않음).</p>
 
-    <details>
+    <details id="keyd">
       <summary>Claude API 키 설정 (사진 분석에 필요)</summary>
       <div class="field" style="margin-top:9px"><label>API 키 (이 기기에만 저장됨)</label>
         <input id="key" type="password" placeholder="sk-ant-..." autocomplete="off"></div>
@@ -641,7 +645,16 @@ const EXTRACT_SCHEMA = {
 };
 
 let PHOTOS = [];
-const ast = m => { $('aist').textContent = m; };
+const ast = (m, bad) => {
+  const el = $('aist');
+  el.textContent = m || '';
+  el.className = 'stat' + (m ? ' on' : '') + (bad ? ' bad' : '');
+};
+function needKey(){
+  $('keyd').open = true;
+  ast('사진 분석을 하려면 Claude API 키가 필요합니다. 아래 [Claude API 키 설정] 을 열어 키를 넣어주세요. (키 없이 쓰려면 그 아래 [JSON 붙여넣기])', true);
+  try{ $('keyd').scrollIntoView({ behavior:'smooth', block:'center' }); }catch(e){}
+}
 
 async function shrink(file){
   const bmp = await createImageBitmap(file, { imageOrientation:'from-image' });
@@ -670,7 +683,9 @@ async function addFiles(list){
     try { PHOTOS.push(await shrink(f)); } catch(e){ ast('사진을 읽지 못했습니다: ' + e.message); }
   }
   thumbs();
-  ast(PHOTOS.length ? PHOTOS.length + '장 준비됨 — [분석 → 라벨 만들기]' : '');
+  if (!PHOTOS.length){ ast(''); return; }
+  if (($('key').value || '').trim()) analyze();          // 키가 있으면 바로 분석
+  else { ast(PHOTOS.length + '장 준비됨.'); needKey(); }
 }
 $('pick').onclick = () => $('files').click();
 $('cam').onclick  = () => $('camf').click();
@@ -701,9 +716,9 @@ async function callClaude(body, key, withFallback){
 }
 
 async function analyze(){
-  if (!PHOTOS.length){ ast('먼저 사진을 선택하세요.'); return; }
+  if (!PHOTOS.length){ ast('먼저 사진을 선택하세요.', true); return; }
   const key = ($('key').value || '').trim();
-  if (!key){ ast('API 키가 없습니다. [API 키 설정] 을 열어 입력하거나, JSON 붙여넣기를 사용하세요.'); return; }
+  if (!key){ needKey(); return; }
   const content = [];
   PHOTOS.forEach((p, i) => {
     content.push({ type:'text', text:'사진 ' + (i+1) + ':' });
@@ -724,12 +739,16 @@ async function analyze(){
     let r = await callClaude(body, key, true);
     if (!r.ok && /fallback|beta|effort/i.test(JSON.stringify(r.json))) r = await callClaude(body, key, false);
     if (!r.ok){
-      ast('오류 ' + r.status + ': ' + ((r.json.error && r.json.error.message) || '요청 실패'));
+      const detail = (r.json.error && r.json.error.message) || '요청 실패';
+      const hint = { 401:'API 키가 틀렸거나 만료됐습니다.', 403:'이 키로는 접근할 수 없습니다.',
+                     400:'요청 형식 오류입니다.', 429:'사용 한도를 넘었습니다. 콘솔에서 한도를 확인하세요.',
+                     529:'서버가 혼잡합니다. 잠시 뒤 다시 시도하세요.' }[r.status] || '';
+      ast('오류 ' + r.status + (hint ? ' — ' + hint : '') + ' (' + detail + ')', true);
       return;
     }
-    if (r.json.stop_reason === 'refusal'){ ast('모델이 이 사진 분석을 거부했습니다.'); return; }
+    if (r.json.stop_reason === 'refusal'){ ast('모델이 이 사진 분석을 거부했습니다.', true); return; }
     const blk = (r.json.content || []).find(b => b.type === 'text');
-    if (!blk){ ast('응답에 결과가 없습니다.'); return; }
+    if (!blk){ ast('응답에 결과가 없습니다.', true); return; }
     const o = JSON.parse(blk.text);
     apply(o);
     const miss = ['brand','origin','region','farm','process','roasted']
@@ -737,14 +756,19 @@ async function analyze(){
     ast('추출 완료' + (miss ? ' — 사진에서 확인되지 않은 항목 ' + miss + '개는 비워 뒀습니다. 확인 후 인쇄하세요.' : ' — 확인 후 인쇄하세요.'));
     if ($('autoprint').checked) $('print').onclick();
   }catch(e){
-    ast('오류: ' + (e && e.message ? e.message : e));
+    const m = (e && e.message) ? e.message : String(e);
+    if (/failed to fetch|networkerror|load failed/i.test(m))
+      ast('통신 실패 — 인터넷 연결을 확인하세요. 연결이 정상인데도 계속 실패하면 브라우저가 API 호출을 차단한 경우이니 알려주세요. (' + m + ')', true);
+    else if (/JSON/i.test(m))
+      ast('응답을 해석하지 못했습니다. 다시 시도해 주세요. (' + m + ')', true);
+    else ast('오류: ' + m, true);
   }
 }
 $('ai').onclick = analyze;
 
 $('jsonapply').onclick = () => {
   try{ apply(JSON.parse($('jsonin').value)); ast('JSON 적용됨'); }
-  catch(e){ ast('JSON 형식 오류: ' + e.message); }
+  catch(e){ ast('JSON 형식 오류: ' + e.message, true); }
 };
 
 /* ---- 안드로이드 "공유 → 원두라벨" 로 들어온 사진 받기 ---- */
@@ -763,9 +787,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
       const b = await res.blob();
       await addFiles([new File([b], 'shared' + i + '.jpg', { type: b.type || 'image/jpeg' })]);
     }
-    if (PHOTOS.length && ($('key').value || '').trim()) analyze();
-    else if (PHOTOS.length) ast(PHOTOS.length + '장 받음 — [분석 → 라벨 만들기]');
-  }catch(e){ ast('공유된 사진을 읽지 못했습니다: ' + e.message); }
+    if (PHOTOS.length && !($('key').value || '').trim()) needKey();
+  }catch(e){ ast('공유된 사진을 읽지 못했습니다: ' + e.message, true); }
 })();
 
 /* API 키·설정 기억 */
