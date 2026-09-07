@@ -40,6 +40,13 @@
     background:#f0eee8;border:1.5px solid var(--line);font-size:13.5px;font-weight:700;line-height:1.4}
   .stat.on{display:block}
   .stat.bad{background:#fdeceb;border-color:#e5b4ae;color:#8a1f11}
+  .picker{display:flex;gap:9px;overflow-x:auto;padding:2px 0 4px}
+  .pick{flex:0 0 auto;background:#fff;border:2px solid var(--line);border-radius:10px;padding:6px 6px 4px;
+        display:block;color:var(--muted)}
+  .pick.on{border-color:#111}
+  .pick img{display:block;width:150px;height:45px;border-radius:3px}
+  .pick span{display:block;font-size:11.5px;font-weight:800;margin-top:4px}
+  .pick.on span{color:#111}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .thumbs div{position:relative}
   .thumbs img{width:74px;height:74px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line)}
@@ -120,7 +127,7 @@
   <div class="card">
     <h2>로스팅 날짜</h2>
     <div class="row">
-      <div class="field" style="flex:2 1 0"><label>날짜 (비우면 손으로 적는 빈칸)</label><input id="roasted" placeholder="2026-09-06"></div>
+      <div class="field" style="flex:2 1 0"><label>로스팅 날짜</label><input id="roasted" placeholder="26.09.07"></div>
       <div class="field" style="flex:1 1 0;display:flex;align-items:flex-end">
         <button class="ghost sm" id="today" style="width:100%">오늘</button>
       </div>
@@ -146,11 +153,9 @@
     <div id="st" class="hint" style="font-weight:700;min-height:18px"></div>
     <p class="hint" style="margin-top:10px"><b>프린터로 인쇄</b>는 안드로이드 Chrome에서 동작합니다(Web Bluetooth). 첫 1회만 기기를 선택하면 이후에는 바로 연결됩니다.<br>저장이 막히면 라벨 이미지를 <b>길게 눌러 "이미지 저장"</b> 하세요.<br>
       저장 후 갤러리 → 공유 → 라벨 프린터 앱으로 보내면 바로 인쇄됩니다.</p>
-    <div class="row" style="margin-top:10px;max-width:420px;margin-left:auto;margin-right:auto">
-      <div class="field"><label>디자인</label><select id="design">
-        <option value="simple" selected>심플 (글자만)</option>
-        <option value="icons">아이콘 + 테두리</option>
-      </select></div>
+    <div style="margin-top:12px;text-align:left">
+      <label style="margin-bottom:6px">디자인</label>
+      <div id="picker" class="picker"></div>
     </div>
     <div class="field" style="margin-top:0;max-width:260px;margin-left:auto;margin-right:auto">
       <label>저장 해상도</label>
@@ -385,63 +390,6 @@ function drawIn(t, px, ls, x, yTop, boxH, align){
 }
 function roundRect(x, y, w, h, r){ ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
 
-function drawLabel(W){
-  return ($('design') && $('design').value === 'icons') ? drawLabelIcons(W) : drawLabelSimple(W);
-}
-
-/* 심플: 도형 없이 타이포그래피만. 컵노트를 크게. */
-function drawLabelSimple(W){
-  const S = W / 960, H = Math.round(288 * S);
-  cv.width = W; cv.height = H;
-  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
-  ctx.save(); ctx.scale(S, S);
-  ctx.fillStyle = '#000'; ctx.strokeStyle = '#000';
-
-  const L = 24, R = 936, IW = R - L;
-  const D = readFields();
-
-  // 1행: 브랜드 | 가공방식
-  const procW = D.process ? widthOf(D.process, 34, 0) : 0;
-  if (D.brand){ const bs = fit(D.brand, IW - procW - 24, 30, 2.4, 15);
-    drawIn(D.brand, bs, 2.4 * bs/30, L, 16, 32, 'left'); }
-  if (D.process) drawIn(D.process, 34, 0, R, 16, 32, 'right');
-
-  // 2행: 원산지(가장 큼) | 지역/농장
-  const stack = [D.region, D.farm].filter(Boolean);
-  let sw = 0, ss = 33;
-  if (stack.length){
-    ss = Math.min.apply(null, stack.map(t => fit(t, IW * 0.44, 33, 0, 17)));
-    sw = Math.max.apply(null, stack.map(t => widthOf(t, ss, 0)));
-    const gap = 8, blockH = stack.length * ss + (stack.length - 1) * gap;
-    let sy = 52 + 92 - 12 - blockH;
-    stack.forEach(t => { drawIn(t, ss, 0, R, sy, ss, 'right'); sy += ss + gap; });
-  }
-  if (D.origin){ const os = fit(D.origin, IW - sw - (sw ? 26 : 0), 94, -1.5, 26);
-    drawIn(D.origin, os, -1.5 * os/94, L, 52, 92, 'left'); }
-
-  // 3행: 컵노트 (도형 없이 크게)
-  if (D.notes.length){
-    const t = D.notes.map(x => x.toUpperCase()).join('  ·  ');
-    const ns = fit(t, IW, 58, -0.5, 22);
-    drawIn(t, ns, -0.5 * ns/58, L, 150, 58, 'left');
-  }
-
-  // 4행: 로스팅 날짜
-  ctx.fillRect(L, 214, IW, 3);
-  const lab = 'ROASTED';
-  drawIn(lab, 32, .6, L, 224, 48, 'left');
-  const lx = L + widthOf(lab, 32, .6) + 14;
-  if (D.roasted){
-    const ds = fit(D.roasted.toUpperCase(), R - lx, 32, .6, 16);
-    drawIn(D.roasted.toUpperCase(), ds, .6, lx, 224, 48, 'left');
-  } else {
-    ctx.fillRect(lx, 224 + 32, R - lx, 3);
-  }
-  ctx.restore();
-  return { W:W, H:H };
-}
-
 function readFields(){
   return {
     brand:  $('brand').value.trim().toUpperCase(),
@@ -449,76 +397,179 @@ function readFields(){
     process:$('process').value.trim().toUpperCase(),
     region: $('region').value.trim().toUpperCase(),
     farm:   $('farm').value.trim().toUpperCase(),
-    notes: [$('n1').value.trim(), $('n2').value.trim(), $('n3').value.trim()].filter(Boolean),
-    roasted:$('roasted').value.trim()
+    notes: [$('n1').value.trim(), $('n2').value.trim(), $('n3').value.trim()]
+             .filter(Boolean).map(t => t.toUpperCase()),
+    date:   fmtDate($('roasted').value)
   };
 }
+const p2 = n => String(n).padStart(2, '0');
+function fmtDate(v){
+  const s = (v || '').trim(); if (!s) return '';
+  let m = s.match(/(\d{4})\D?(\d{1,2})\D?(\d{1,2})/);          // 2026-09-07
+  if (m) return String(m[1]).slice(2) + '.' + p2(m[2]) + '.' + p2(m[3]);
+  m = s.match(/^(\d{2})\D(\d{1,2})\D(\d{1,2})$/);              // 26.9.7
+  if (m) return m[1] + '.' + p2(m[2]) + '.' + p2(m[3]);
+  return s.toUpperCase();
+}
+const joinNotes = n => n.join('  ·  ');
+function wrapFit(t, maxW, oneLine, twoLine, min){
+  if (widthOf(t, oneLine, 0) <= maxW) return { size:oneLine, lines:[t] };
+  const one = fit(t, maxW, oneLine, 0, min);        // 한 줄로 줄여서 될 만하면 한 줄 유지
+  if (one >= twoLine) return { size:one, lines:[t] };
+  const w = t.split('  ·  ');
+  if (w.length > 1){
+    for (let cut = w.length - 1; cut >= 1; cut--){
+      const l1 = w.slice(0, cut).join('  ·  '), l2 = w.slice(cut).join('  ·  ');
+      const sz = Math.min(fit(l1, maxW, twoLine, 0, min), fit(l2, maxW, twoLine, 0, min));
+      if (sz >= min) return { size:sz, lines:[l1, l2] };
+    }
+  }
+  return { size:fit(t, maxW, oneLine, 0, min), lines:[t] };
+}
 
-function drawLabelIcons(W){
+/* ---------- 라벨 디자인 5종 (+ 아이콘형) ---------- */
+const L = 24, R = 936, IW = R - L;
+
+const DESIGNS = [
+{ id:'basic', name:'기본', draw(D){
+    const pw = D.process ? widthOf(D.process, 34, 0) : 0;
+    if (D.brand) drawIn(D.brand, fit(D.brand, IW - pw - 24, 30, 2.4, 15), 2.4, L, 16, 32, 'left');
+    if (D.process) drawIn(D.process, 34, 0, R, 16, 32, 'right');
+    const st = [D.region, D.farm].filter(Boolean);
+    let sw = 0;
+    if (st.length){
+      const ss = Math.min.apply(null, st.map(t => fit(t, IW * .44, 33, 0, 17)));
+      sw = Math.max.apply(null, st.map(t => widthOf(t, ss, 0)));
+      let y = 52 + 92 - 12 - (st.length * ss + (st.length - 1) * 8);
+      st.forEach(t => { drawIn(t, ss, 0, R, y, ss, 'right'); y += ss + 8; });
+    }
+    if (D.origin) drawIn(D.origin, fit(D.origin, IW - sw - (sw?26:0), 94, -1.5, 26), -1.5, L, 52, 92, 'left');
+    if (D.notes.length){ const t = joinNotes(D.notes);
+      drawIn(t, fit(t, IW, 58, -.5, 22), -.5, L, 152, 58, 'left'); }
+    if (D.date) drawIn('ROASTED  ' + D.date, 34, .4, L, 222, 44, 'left');
+  }},
+
+{ id:'notes', name:'컵노트 강조', draw(D){
+    if (D.brand) drawIn(D.brand, fit(D.brand, IW * .5, 30, 2.4, 15), 2.4, L, 14, 34, 'left');
+    if (D.origin) drawIn(D.origin, fit(D.origin, IW * .48, 40, -.5, 20), -.5, R, 14, 34, 'right');
+    if (D.notes.length){
+      const w = wrapFit(joinNotes(D.notes), IW, 78, 54, 26);
+      const h = w.lines.length * w.size + (w.lines.length - 1) * 8;
+      let y = 60 + (118 - h) / 2;
+      w.lines.forEach(t => { drawIn(t, w.size, -.5, L, y, w.size, 'left'); y += w.size + 8; });
+    }
+    const dw = D.date ? widthOf(D.date, 34, .4) : 0;
+    const spec = [D.process, D.region, D.farm].filter(Boolean).join('  ·  ');
+    if (spec) drawIn(spec, fit(spec, IW - dw - 24, 32, 0, 15), 0, L, 200, 44, 'left');
+    if (D.date) drawIn(D.date, 34, .4, R, 200, 44, 'right');
+  }},
+
+{ id:'center', name:'가운데 정렬', draw(D){
+    const C = 480;
+    if (D.brand) drawIn(D.brand, fit(D.brand, IW, 27, 2.6, 14), 2.6, C, 12, 28, 'center');
+    if (D.origin) drawIn(D.origin, fit(D.origin, IW, 84, -1.2, 24), -1.2, C, 44, 84, 'center');
+    if (D.notes.length){ const t = joinNotes(D.notes);
+      drawIn(t, fit(t, IW, 54, -.5, 22), -.5, C, 136, 54, 'center'); }
+    const spec = [D.process, D.region, D.farm].filter(Boolean).join('  ·  ');
+    if (spec) drawIn(spec, fit(spec, IW, 30, 0, 14), 0, C, 196, 34, 'center');
+    if (D.date) drawIn(D.date, 32, .4, C, 234, 38, 'center');
+  }},
+
+{ id:'split', name:'좌우 2단', draw(D){
+    const LW = 596, RX = 936;
+    if (D.origin) drawIn(D.origin, fit(D.origin, LW, 86, -1.2, 22), -1.2, L, 20, 86, 'left');
+    if (D.notes.length){
+      const w = wrapFit(joinNotes(D.notes), LW, 50, 38, 20);
+      let y = 116; w.lines.forEach(t => { drawIn(t, w.size, -.5, L, y, w.size, 'left'); y += w.size + 7; });
+    }
+    if (D.brand) drawIn(D.brand, fit(D.brand, LW, 27, 2.2, 13), 2.2, L, 236, 30, 'left');
+    const rows = [D.process, D.region, D.farm].filter(Boolean);
+    if (rows.length){
+      const rs = Math.min.apply(null, rows.map(t => fit(t, 300, 34, 0, 16)));
+      let y = 22; rows.forEach(t => { drawIn(t, rs, 0, RX, y, rs, 'right'); y += rs + 10; });
+    }
+    if (D.date) drawIn(D.date, 34, .4, RX, 232, 38, 'right');
+  }},
+
+{ id:'mini', name:'최소 (3줄)', draw(D){
+    if (D.origin) drawIn(D.origin, fit(D.origin, IW, 118, -2, 30), -2, L, 16, 112, 'left');
+    if (D.notes.length){ const t = joinNotes(D.notes);
+      drawIn(t, fit(t, IW, 66, -.5, 24), -.5, L, 138, 66, 'left'); }
+    if (D.date) drawIn(D.date, 40, .4, R, 218, 48, 'right');
+    if (D.process) drawIn(D.process, 34, 0, L, 218, 48, 'left');
+  }},
+
+{ id:'icons', name:'아이콘형', draw(D){
+    ctx.lineWidth = 6; roundRect(3,3,954,282,17); ctx.stroke();
+    const IL = 17+6, IR = 960-17-6, W2 = IR - IL;
+    const grp = [D.process, D.region, D.farm].filter(Boolean);
+    let gs = 34, gw = 0;
+    if (grp.length){
+      gs = Math.min.apply(null, grp.map(t => fit(t, W2 * .46, 34, 0, 16)));
+      gw = Math.max.apply(null, grp.map(t => widthOf(t, gs, 0)));
+      let gy = 18; grp.forEach(t => { drawIn(t, gs, 0, IR, gy, gs, 'right'); gy += gs + 7; });
+    }
+    const free = W2 - gw - (gw ? 26 : 0);
+    if (D.brand) drawIn(D.brand, fit(D.brand, free, 28, 2.6, 14), 2.6, IL, 18, 30, 'left');
+    if (D.origin) drawIn(D.origin, fit(D.origin, free, 92, -1.5, 24), -1.5, IL, 51, 92, 'left');
+    const n = D.notes.length;
+    if (n){
+      const gap = 12, cw = (W2 - gap * (n-1)) / n, ny = 151, nh = 66;
+      D.notes.forEach((t, i) => {
+        const x = IL + i * (cw + gap), ic = iconFor(t);
+        ctx.lineWidth = 4.5; roundRect(x, ny, cw, nh, nh/2); ctx.stroke();
+        const isz = ic ? 46 : 0, ig = ic ? 10 : 0;
+        const ts = fit(t, cw - isz - ig - 26, 40, -.5, 14), tw = widthOf(t, ts, -.5);
+        let cx = x + (cw - (isz + ig + tw)) / 2;
+        if (ic){ ctx.save(); ctx.translate(cx, ny + (nh - isz)/2); ctx.scale(isz/24, isz/24);
+          ctx.lineWidth = 1.9; ic.draw(ctx); ctx.restore();
+          ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; cx += isz + ig; }
+        drawIn(t, ts, -.5, cx, ny, nh, 'left');
+      });
+    }
+    ctx.fillRect(IL, 224, W2, 5);
+    if (D.date) drawIn('ROASTED  ' + D.date, 33, .6, IL, 233, 46, 'left');
+    else drawIn('ROASTED', 33, .6, IL, 233, 46, 'left');
+  }}
+];
+
+let DESIGN = 'basic';
+try{ const d = localStorage.getItem('beanlabel:design'); if (d && DESIGNS.some(x => x.id === d)) DESIGN = d; }catch(e){}
+const designById = id => DESIGNS.find(d => d.id === id) || DESIGNS[0];
+
+function drawLabel(W, id){
   const S = W / 960, H = Math.round(288 * S);
   cv.width = W; cv.height = H;
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
   ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
   ctx.save(); ctx.scale(S, S);
   ctx.fillStyle = '#000'; ctx.strokeStyle = '#000';
-
-  // frame
-  ctx.lineWidth = 6; roundRect(3,3,954,282,17); ctx.stroke();
-
-  const L = 17+6, R = 960-17-6, IW = R-L;
-  const D = readFields();
-
-  // rows 1-2 : brand + origin (left) | process / region / farm (right, one group)
-  const grp = [D.process, D.region, D.farm].filter(Boolean);
-  let gs = 34, gw = 0;
-  if (grp.length){
-    gs = Math.min.apply(null, grp.map(t => fit(t, IW * 0.46, 34, 0, 16)));
-    gw = Math.max.apply(null, grp.map(t => widthOf(t, gs, 0)));
-    let gy = 18;
-    grp.forEach(t => { drawIn(t, gs, 0, R, gy, gs, 'right'); gy += gs + 7; });
-  }
-  const free = IW - gw - (gw ? 26 : 0);
-  if (D.brand){ const bs = fit(D.brand, free, 28, 2.6, 14);
-    drawIn(D.brand, bs, 2.6 * bs/28, L, 18, 30, 'left'); }
-  if (D.origin){ const os = fit(D.origin, free, 92, -1.5, 24);
-    drawIn(D.origin, os, -1.5 * os/92, L, 51, 92, 'left'); }
-
-  // row 3 : cup-note chips
-  const ny = 151, nh = 66, n = D.notes.length;
-  if (n){
-    const gap = 12, cw = (IW - gap * (n-1)) / n;
-    D.notes.forEach((raw, i) => {
-      const x = L + i * (cw + gap), t = raw.toUpperCase(), ic = iconFor(raw);
-      ctx.lineWidth = 4.5; roundRect(x, ny, cw, nh, nh/2); ctx.stroke();
-      const isz = ic ? 46 : 0, ig = ic ? 10 : 0, pad = 26;
-      const ts = fit(t, cw - isz - ig - pad, 40, -.5, 14);
-      const tw = widthOf(t, ts, -.5 * ts/40);
-      let cx = x + (cw - (isz + ig + tw)) / 2;
-      if (ic){ ctx.save(); ctx.translate(cx, ny + (nh - isz)/2); ctx.scale(isz/24, isz/24);
-        ctx.lineWidth = 1.9; ic.draw(ctx); ctx.restore();
-        ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; cx += isz + ig; }
-      drawIn(t, ts, -.5 * ts/40, cx, ny, nh, 'left');
-    });
-  }
-
-  // row 4 : roast date
-  const by = 224;
-  ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(L, by); ctx.lineTo(R, by); ctx.stroke();
-  const lab = 'ROASTED';
-  drawIn(lab, 33, .6, L, by + 9, 46, 'left');
-  const lx = L + widthOf(lab, 33, .6) + 14;
-  if (D.roasted){
-    const ds = fit(D.roasted.toUpperCase(), R - lx, 33, .6, 16);
-    drawIn(D.roasted.toUpperCase(), ds, .6, lx, by + 9, 46, 'left');
-  } else {
-    ctx.fillRect(lx, by + 9 + 30, R - lx, 5);
-  }
+  designById(id || DESIGN).draw(readFields());
   ctx.restore();
-  return {W: W, H: H};
+  return { W:W, H:H };
+}
+
+function designPicker(){
+  const box = $('picker'); if (!box) return;
+  box.innerHTML = '';
+  DESIGNS.forEach(d => {
+    drawLabel(400, d.id);
+    const url = cv.toDataURL('image/png');
+    const b = document.createElement('button');
+    b.className = 'pick' + (d.id === DESIGN ? ' on' : '');
+    b.innerHTML = '<img src="' + url + '"><span>' + d.name + '</span>';
+    b.onclick = () => { DESIGN = d.id;
+      try{ localStorage.setItem('beanlabel:design', d.id); }catch(e){}
+      drawLabel(960); $('out').src = cv.toDataURL('image/png');
+      [].forEach.call(box.children, (c, i) => c.className = 'pick' + (DESIGNS[i].id === DESIGN ? ' on' : '')); };
+    box.appendChild(b);
+  });
+  drawLabel(960);
 }
 
 function render(){
   drawLabel(960);
+  designPicker();
   $('out').src = cv.toDataURL('image/png');
   const d = [$('origin').value, $('brand').value].join(' ');
   $('warn').textContent = d.trim() ? '' : '원산지를 입력하세요.';
@@ -530,10 +581,8 @@ function load(o){ FIELDS.forEach(f => { if (o[f] !== undefined) $(f).value = o[f
 function save(){ try{ localStorage.setItem('beanlabel:last', JSON.stringify(data())); }catch(e){} }
 
 FIELDS.forEach(f => $(f).addEventListener('input', render));
-$('design').addEventListener('change', () => { try{ localStorage.setItem('beanlabel:design', $('design').value); }catch(e){} render(); });
-try{ const dv = localStorage.getItem('beanlabel:design'); if (dv) $('design').value = dv; }catch(e){}
 $('today').onclick = () => { const d = new Date();
-  $('roasted').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  $('roasted').value = String(d.getFullYear()).slice(2) + '.' + p2(d.getMonth()+1) + '.' + p2(d.getDate());
   render(); };
 $('actual').onclick = () => $('out').classList.toggle('actual');
 $('save').onclick = () => {
