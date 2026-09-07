@@ -641,16 +641,18 @@ const EXTRACT_SYSTEM = [
 '7. 빈 문자열 대신 반드시 null 을 쓴다.'
 ].join('\n');
 
+const nul = d => ({ anyOf:[{ type:'string' }, { type:'null' }], description:d });
 const EXTRACT_SCHEMA = {
   type:'object',
   properties:{
-    brand:  { type:['string','null'] },
-    origin: { type:['string','null'] },
-    region: { type:['string','null'] },
-    farm:   { type:['string','null'] },
-    process:{ type:['string','null'] },
-    notes:  { type:'array', items:{ type:'string' }, maxItems:3 },
-    roasted:{ type:['string','null'] }
+    brand:  nul('로스터/브랜드 이름. 없으면 null'),
+    origin: nul('생산 국가 하나, 영문 대문자. 없으면 null'),
+    region: nul('생산 지역. 없으면 null'),
+    farm:   nul('농장 또는 워싱스테이션 이름. 없으면 null'),
+    process:nul('가공방식(WASHED, NATURAL, HONEY, ANAEROBIC, DECAF 등). 없으면 null'),
+    notes:  { type:'array', items:{ type:'string' },
+              description:'컵노트·향미. 최대 3개까지만. 사진에 적힌 언어 그대로. 없으면 빈 배열' },
+    roasted:nul('로스팅 날짜 YYYY-MM-DD. 확실할 때만, 아니면 null')
   },
   required:['brand','origin','region','farm','process','notes','roasted'],
   additionalProperties:false
@@ -708,7 +710,7 @@ function apply(o){
   const set = (id, v) => { $(id).value = (v === null || v === undefined) ? '' : String(v); };
   set('brand', o.brand); set('origin', o.origin); set('region', o.region);
   set('farm', o.farm);   set('process', o.process); set('roasted', o.roasted);
-  const n = Array.isArray(o.notes) ? o.notes : [];
+  const n = (Array.isArray(o.notes) ? o.notes : []).filter(Boolean).slice(0, 3);
   set('n1', n[0]); set('n2', n[1]); set('n3', n[2]);
   render();
 }
