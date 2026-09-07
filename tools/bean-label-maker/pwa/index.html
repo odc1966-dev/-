@@ -833,6 +833,24 @@ function apply(o){
   render();
 }
 
+const JSON_TAIL = '\n\n출력 형식: 설명이나 코드펜스 없이 JSON 객체 하나만 출력한다. '
+  + '{"brand":문자열|null,"origin":문자열|null,"region":문자열|null,"farm":문자열|null,'
+  + '"process":문자열|null,"notes":[문자열 최대 3개],"roasted":"YYYY-MM-DD"|null}';
+
+function buildBody(model, content, o){
+  const body = {
+    model: model,
+    max_tokens: 4000,
+    system: EXTRACT_SYSTEM + (o.noSchema ? JSON_TAIL : ''),
+    messages: [{ role:'user', content: content }]
+  };
+  const oc = {};
+  if (o.effort) oc.effort = 'medium';
+  if (!o.noSchema) oc.format = { type:'json_schema', schema: EXTRACT_SCHEMA };
+  if (Object.keys(oc).length) body.output_config = oc;
+  return body;
+}
+
 async function callClaude(body, key, withFallback){
   const headers = {
     'content-type':'application/json',
@@ -847,15 +865,25 @@ async function callClaude(body, key, withFallback){
   return { ok:r.ok, status:r.status, json: await r.json().catch(() => ({})) };
 }
 
+function parseJson(t){
+  try { return JSON.parse(t); } catch(e){}
+  const m = String(t).match(/\{[\s\S]*\}/);
+  if (m) return JSON.parse(m[0]);
+  throw new Error('JSON 형태의 응답이 아닙니다');
+}
+
 async function analyze(){
   if (!PHOTOS.length){ ast('먼저 사진을 선택하세요.', true); return; }
   const key = cleanKey();
   if (!key){ needKey(); return; }
   if (!/^sk-ant-/.test(key)){
     $('keyd').open = true; keyCheck();
-    ast('키 형식이 아닙니다. 콘솔에서 만든 키 값(sk-ant- 로 시작하는 긴 문자열)을 붙여넣어 주세요. 키 이름이나 다른 값을 넣으신 것 같습니다.', true);
+    ast('키 형식이 아닙니다. 콘솔에서 만든 키 값(sk-ant- 로 시작하는 긴 문자열)을 붙여넣어 주세요.', true);
     return;
   }
+  const model = $('model').value;
+  const advanced = /^claude-(opus|sonnet|fable)/.test(model);   // effort·fallbacks 지원 모델
+
   const content = [];
   PHOTOS.forEach((p, i) => {
     content.push({ type:'text', text:'사진 ' + (i+1) + ':' });
@@ -863,22 +891,31 @@ async function analyze(){
   });
   content.push({ type:'text', text:'이 사진들에서 라벨 정보를 추출해줘.' });
 
-  const body = {
-    model: $('model').value,
-    max_tokens: 4000,
-    system: EXTRACT_SYSTEM,
-    messages: [{ role:'user', content: content }],
-    output_config: { effort:'medium', format:{ type:'json_schema', schema: EXTRACT_SCHEMA } }
-  };
+  // 모델에 따라 옵션을 줄여가며 재시도
+  const plans = [
+    { effort:advanced, noSchema:false, fb:advanced },
+    { effort:false,    noSchema:false, fb:false },
+    { effort:false,    noSchema:true,  fb:false }
+  ];
 
   ast('사진 분석 중… (10~30초)');
   try{
-    let r = await callClaude(body, key, true);
-    if (!r.ok && /fallback|beta|effort/i.test(JSON.stringify(r.json))) r = await callClaude(body, key, false);
+    let r = null;
+    for (let i = 0; i < plans.length; i++){
+      r = await callClaude(buildBody(model, content, plans[i]), key, plans[i].fb);
+      if (r.ok) break;
+      const txt = JSON.stringify(r.json);
+      const retryable = r.status === 400 &&
+        /effort|fallback|beta|output_config|json_schema|schema|format/i.test(txt);
+      if (!retryable || i === plans.length - 1) break;
+    }
     if (!r.ok){
       const detail = (r.json.error && r.json.error.message) || '요청 실패';
-      const hint = { 401:'키 값이 서버에서 거부됐습니다. 콘솔에서 키를 새로 만들어 전체를 복사해 붙여넣어 주세요(키는 만들 때 한 번만 보입니다).', 403:'이 키로는 접근할 수 없습니다.',
-                     400:'요청 형식 오류입니다.', 429:'사용 한도를 넘었습니다. 콘솔에서 한도를 확인하세요.',
+      const hint = { 401:'키 값이 서버에서 거부됐습니다. 콘솔에서 키를 새로 만들어 전체를 복사해 붙여넣어 주세요(키는 만들 때 한 번만 보입니다).',
+                     403:'이 키로는 접근할 수 없습니다.',
+                     400:'요청이 거부됐습니다.',
+                     413:'사진 용량이 너무 큽니다. 장수를 줄여보세요.',
+                     429:'사용 한도를 넘었습니다. 콘솔에서 한도·크레딧을 확인하세요.',
                      529:'서버가 혼잡합니다. 잠시 뒤 다시 시도하세요.' }[r.status] || '';
       ast('오류 ' + r.status + (hint ? ' — ' + hint : '') + ' (' + detail + ')', true);
       return;
@@ -886,16 +923,17 @@ async function analyze(){
     if (r.json.stop_reason === 'refusal'){ ast('모델이 이 사진 분석을 거부했습니다.', true); return; }
     const blk = (r.json.content || []).find(b => b.type === 'text');
     if (!blk){ ast('응답에 결과가 없습니다.', true); return; }
-    const o = JSON.parse(blk.text);
+    const o = parseJson(blk.text);
     apply(o);
-    const miss = ['brand','origin','region','farm','process','roasted']
-      .filter(k => !o[k]).length + (o.notes && o.notes.length ? 0 : 1);
-    ast('추출 완료' + (miss ? ' — 사진에서 확인되지 않은 항목 ' + miss + '개는 비워 뒀습니다. 확인 후 인쇄하세요.' : ' — 확인 후 인쇄하세요.'));
+    const miss = ['brand','origin','region','farm','process','roasted'].filter(k => !o[k]).length
+      + ((o.notes && o.notes.length) ? 0 : 1);
+    ast('추출 완료' + (miss ? ' — 사진에서 확인되지 않은 항목 ' + miss + '개는 비워 뒀습니다. 확인 후 인쇄하세요.'
+                            : ' — 확인 후 인쇄하세요.'));
     if ($('autoprint').checked) $('print').onclick();
   }catch(e){
     const m = (e && e.message) ? e.message : String(e);
     if (/failed to fetch|networkerror|load failed/i.test(m))
-      ast('통신 실패 — 인터넷 연결을 확인하세요. 연결이 정상인데도 계속 실패하면 브라우저가 API 호출을 차단한 경우이니 알려주세요. (' + m + ')', true);
+      ast('통신 실패 — 인터넷 연결을 확인하세요. (' + m + ')', true);
     else if (/JSON/i.test(m))
       ast('응답을 해석하지 못했습니다. 다시 시도해 주세요. (' + m + ')', true);
     else ast('오류: ' + m, true);
