@@ -1,0 +1,514 @@
+<title>클로드 코드 마스터리 12주</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#ECF1EF; --surface:#FFFFFF; --surface-2:#F4F8F6; --raise:#FBFDFC;
+  --line:#D2DEDA; --line-soft:#E4EDEA;
+  --ink:#111C1A; --ink-2:#394A47; --muted:#6B7C78;
+  --accent:#0E6355; --accent-soft:#DCEDE8; --accent-line:#9CC9BE;
+  --amber:#8A6412; --amber-soft:#F3EBD6;
+  --clay:#9A4526;
+  --shadow:0 1px 2px rgba(17,28,26,.05), 0 8px 24px -16px rgba(17,28,26,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1513; --surface:#141F1C; --surface-2:#182522; --raise:#1D2B27;
+    --line:#2A3A36; --line-soft:#22302C;
+    --ink:#E6EEEB; --ink-2:#B3C3BF; --muted:#829691;
+    --accent:#5FC7B0; --accent-soft:#153029; --accent-line:#2C5B50;
+    --amber:#D9AE5A; --amber-soft:#2C2617;
+    --clay:#DE8A66;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1513; --surface:#141F1C; --surface-2:#182522; --raise:#1D2B27;
+  --line:#2A3A36; --line-soft:#22302C;
+  --ink:#E6EEEB; --ink-2:#B3C3BF; --muted:#829691;
+  --accent:#5FC7B0; --accent-soft:#153029; --accent-line:#2C5B50;
+  --amber:#D9AE5A; --amber-soft:#2C2617;
+  --clay:#DE8A66;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  font-size:15px; line-height:1.72; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid var(--accent-line)}
+a:hover{border-bottom-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------- shell ---------- */
+.shell{display:grid; grid-template-columns:236px minmax(0,1fr); gap:0; max-width:1180px; margin:0 auto}
+.rail{
+  position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+  padding:34px 20px 40px 26px; border-right:1px solid var(--line);
+}
+.main{padding:34px 40px 96px; min-width:0}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static; height:auto; border-right:0; border-bottom:1px solid var(--line); padding:22px 20px}
+  .main{padding:26px 20px 72px}
+}
+
+/* ---------- rail ---------- */
+.brand{font-family:"Gowun Batang",serif; font-weight:700; font-size:19px; line-height:1.35; letter-spacing:-.01em}
+.brand span{display:block; font-family:"IBM Plex Mono",monospace; font-weight:400; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:6px}
+.ring-wrap{display:flex; align-items:center; gap:12px; margin:22px 0 20px}
+.ring{width:56px; height:56px; flex:none}
+.ring circle{fill:none; stroke-width:6}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--accent); stroke-linecap:round; transition:stroke-dasharray .4s ease}
+.ring-num{font-family:"IBM Plex Mono",monospace; font-size:17px; font-weight:500; font-variant-numeric:tabular-nums}
+.ring-lab{font-size:11.5px; color:var(--muted); line-height:1.4}
+.navlist{display:flex; flex-direction:column; gap:1px; margin-top:4px}
+.navlist a{
+  display:grid; grid-template-columns:26px 1fr auto; align-items:baseline; gap:8px;
+  padding:6px 8px 6px 4px; border:0; border-radius:5px; color:var(--ink-2); font-size:13px;
+}
+.navlist a:hover{background:var(--surface-2); color:var(--ink)}
+.navlist .n{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+.navlist .c{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.rail-note{margin-top:22px; padding-top:16px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--muted); line-height:1.6}
+.reset{background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:11px; padding:3px 9px; border-radius:99px; cursor:pointer; margin-top:10px}
+.reset:hover{border-color:var(--accent-line); color:var(--accent)}
+@media (max-width:900px){ .navlist{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr))} }
+
+/* ---------- head ---------- */
+.lede{max-width:66ch}
+h1{font-family:"Gowun Batang",serif; font-size:38px; line-height:1.28; font-weight:700; letter-spacing:-.02em; margin:0 0 14px; text-wrap:balance}
+.sub{font-size:16px; color:var(--ink-2); margin:0 0 8px}
+.meta{font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin-bottom:16px}
+
+/* ---------- ladder ---------- */
+.ladder{border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; margin:30px 0 44px}
+.ladder h2{margin:0; padding:14px 18px; font-size:13px; font-weight:600; letter-spacing:.02em; border-bottom:1px solid var(--line-soft); background:var(--surface-2)}
+.rung{display:grid; grid-template-columns:34px 118px minmax(0,1fr); gap:14px; align-items:baseline; padding:12px 18px; border-bottom:1px solid var(--line-soft); font-size:13.5px}
+.rung:last-child{border-bottom:0}
+.rung .lv{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+.rung .nm{font-weight:600}
+.rung .ds{color:var(--ink-2)}
+.rung.here{background:var(--accent-soft)}
+.rung.here .nm{color:var(--accent)}
+
+/* ---------- phases ---------- */
+.phase{margin:0 0 52px; scroll-margin-top:20px}
+.phase-head{border-top:2px solid var(--ink); padding-top:14px; margin-bottom:6px}
+.phase-tag{display:flex; align-items:baseline; gap:12px; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.phase-tag b{color:var(--clay); font-weight:500}
+.phase h2{font-family:"Gowun Batang",serif; font-size:26px; font-weight:700; letter-spacing:-.015em; margin:6px 0 8px; text-wrap:balance}
+.phase-lede{color:var(--ink-2); font-size:14px; max-width:64ch; margin:0 0 20px}
+
+.items{display:flex; flex-direction:column; gap:10px}
+.item{
+  display:grid; grid-template-columns:24px minmax(0,1fr); gap:12px;
+  background:var(--surface); border:1px solid var(--line-soft); border-radius:9px;
+  padding:14px 16px; transition:border-color .15s, background .15s;
+}
+.item:hover{border-color:var(--line)}
+.item.on{background:var(--surface-2); border-color:var(--accent-line)}
+.item.on .it{color:var(--muted); text-decoration:line-through; text-decoration-color:var(--accent-line)}
+.box{
+  appearance:none; width:17px; height:17px; margin-top:4px; border:1.5px solid var(--line);
+  border-radius:5px; background:var(--raise); cursor:pointer; position:relative; flex:none;
+}
+.box:checked{background:var(--accent); border-color:var(--accent)}
+.box:checked::after{content:""; position:absolute; left:5px; top:1.5px; width:4px; height:9px; border:solid var(--surface); border-width:0 2px 2px 0; transform:rotate(42deg)}
+:root[data-theme="dark"] .box:checked::after{border-color:#0D1513}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .box:checked::after{border-color:#0D1513}}
+.it{display:block; font-weight:600; font-size:14.5px; letter-spacing:-.005em; margin-bottom:3px}
+.id{display:block; color:var(--ink-2); font-size:13.5px}
+.kind{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; padding:1px 6px; border-radius:3px; margin-right:7px; vertical-align:2px;
+  background:var(--accent-soft); color:var(--accent);
+}
+.kind.lab{background:var(--amber-soft); color:var(--amber)}
+.kind.out{background:var(--surface-2); color:var(--clay); border:1px solid var(--line)}
+.check{display:block; margin-top:9px; padding-left:11px; border-left:2px solid var(--accent-line); font-size:12.5px; color:var(--ink-2)}
+.check b{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:1px}
+.docs{margin-top:9px; display:flex; flex-wrap:wrap; gap:5px}
+.docs a{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; padding:2px 7px; border-radius:4px;
+  background:var(--surface-2); border:1px solid var(--line-soft); color:var(--ink-2);
+}
+.docs a:hover{border-color:var(--accent-line); color:var(--accent); background:var(--accent-soft)}
+
+/* ---------- prose blocks ---------- */
+.block{margin:0 0 52px}
+.block h2{font-family:"Gowun Batang",serif; font-size:24px; font-weight:700; margin:0 0 6px; letter-spacing:-.015em}
+.block .phase-lede{margin-bottom:18px}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px}
+.card{background:var(--surface); border:1px solid var(--line-soft); border-radius:9px; padding:15px 17px}
+.card h3{font-size:14.5px; margin:0 0 6px; font-weight:600}
+.card p{margin:0; font-size:13.5px; color:var(--ink-2)}
+.card .tagline{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+
+.week{display:grid; grid-template-columns:64px minmax(0,1fr); gap:14px; padding:10px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px; align-items:baseline}
+.week:last-child{border-bottom:0}
+.week .d{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--clay)}
+.week .b{color:var(--ink-2)}
+.week .b b{color:var(--ink); font-weight:600}
+
+.traps{counter-reset:trap; display:flex; flex-direction:column; gap:0}
+.trap{display:grid; grid-template-columns:28px minmax(0,1fr); gap:12px; padding:11px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px}
+.trap:last-child{border-bottom:0}
+.trap::before{counter-increment:trap; content:counter(trap,decimal-leading-zero); font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); padding-top:2px}
+.trap .x{color:var(--ink-2)}
+.trap .x b{color:var(--ink)}
+.trap .x i{font-style:normal; color:var(--clay)}
+
+pre{background:var(--surface); border:1px solid var(--line-soft); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.65; color:var(--ink-2); margin:0}
+.status{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); margin-top:14px; min-height:16px}
+footer{border-top:1px solid var(--line); padding-top:18px; font-size:12.5px; color:var(--muted); max-width:66ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="shell">
+  <nav class="rail">
+    <div class="brand">클로드 코드<br>마스터리<span>12-week program</span></div>
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+        <circle class="bg" cx="20" cy="20" r="16"></circle>
+        <circle class="fg" id="ring" cx="20" cy="20" r="16" transform="rotate(-90 20 20)" stroke-dasharray="0 100.5"></circle>
+      </svg>
+      <div>
+        <div class="ring-num" id="pct">0%</div>
+        <div class="ring-lab"><span id="donecount">0</span> / <span id="allcount">0</span> 완료</div>
+      </div>
+    </div>
+    <div class="navlist" id="nav"></div>
+    <div class="rail-note">
+      진행 상태는 이 페이지에 저장됩니다. 기기를 바꿔도 이어집니다.
+      <br><button class="reset" id="reset">진행 초기화</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="lede">
+      <div class="meta">Phase 0 → 7 · 문서 150여 편 · 실험 27건</div>
+      <h1>세상에서 클로드 코드를<br>가장 잘 이해하는 사람이 되는 길</h1>
+      <p class="sub">문서를 다 읽는 것으로는 부족합니다. 읽은 것을 <b>재현 가능한 실험</b>으로 바꾸고, 만든 것을 <b>남에게 전수</b>할 수 있을 때 이해가 완성됩니다. 이 커리큘럼은 그 두 가지를 매주 강제합니다.</p>
+    </header>
+
+    <section class="ladder">
+      <h2>이해의 다섯 층위 — 대부분은 2층에서 멈춥니다</h2>
+      <div class="rung"><span class="lv">L1</span><span class="nm">조작 Operate</span><span class="ds">시키면 결과가 나온다. 프롬프트를 쓸 줄 안다.</span></div>
+      <div class="rung"><span class="lv">L2</span><span class="nm">구성 Configure</span><span class="ds">CLAUDE.md·settings·권한을 내 환경에 맞춘다.</span></div>
+      <div class="rung"><span class="lv">L3</span><span class="nm">확장 Extend</span><span class="ds">없는 기능을 skill·subagent·hook·MCP로 만든다.</span></div>
+      <div class="rung here"><span class="lv">L4</span><span class="nm">해부 Internalize</span><span class="ds">왜 그렇게 동작하는지 <b>측정</b>으로 설명한다. 토큰·캐시·컨텍스트를 회계한다.</span></div>
+      <div class="rung here"><span class="lv">L5</span><span class="nm">전수 Create</span><span class="ds">도구를 배포하고, 가르치고, 설계 의도를 서술한다.</span></div>
+    </section>
+
+    <div id="phases"></div>
+
+    <section class="block" id="rhythm">
+      <div class="phase-head"><div class="phase-tag">주간 리듬 · Weekly rhythm</div></div>
+      <h2>하루 60~90분, 다섯 가지 다른 종류의 시간</h2>
+      <p class="phase-lede">매일 같은 일을 하면 L2에서 멈춥니다. 요일마다 <b>인지 활동의 종류</b>를 바꾸는 것이 이 리듬의 핵심입니다.</p>
+      <div class="week"><span class="d">월 · 읽기</span><span class="b"><b>개념 흡수</b> — 그 주 문서를 읽되, 읽으면서 "이건 어떻게 확인하지?" 질문을 3개 적습니다.</span></div>
+      <div class="week"><span class="d">화 · 실험</span><span class="b"><b>측정</b> — 월요일의 질문 3개를 실제 세션으로 검증. <span class="mono">/context</span>, <span class="mono">/cost</span>, 도구 호출 횟수를 기록합니다.</span></div>
+      <div class="week"><span class="d">수 · 구축</span><span class="b"><b>산출물</b> — 배운 것으로 실제 쓸 물건을 만듭니다. 본인 업무(교육자료·평가·앱)에 붙입니다.</span></div>
+      <div class="week"><span class="d">목 · 파괴</span><span class="b"><b>고장내기</b> — 일부러 실패시킵니다. 권한 거부, 컨텍스트 초과, 잘못된 훅. 오류 메시지를 수집합니다.</span></div>
+      <div class="week"><span class="d">금 · 서술</span><span class="b"><b>글쓰기</b> — 그 주 배운 것을 800자로 씁니다. 설명 못 하는 부분이 이해 안 된 부분입니다.</span></div>
+      <div class="week"><span class="d">주말</span><span class="b"><b>캡스톤</b> — 2~3시간, 아래 세 프로젝트 중 하나를 전진시킵니다.</span></div>
+    </section>
+
+    <section class="block" id="capstone">
+      <div class="phase-head"><div class="phase-tag">캡스톤 · Capstone</div></div>
+      <h2>본인 임상 현장에 붙는 세 개의 프로젝트</h2>
+      <p class="phase-lede">이해를 증명하는 것은 시험이 아니라 <b>작동하는 물건</b>입니다. 세 프로젝트는 각각 다른 확장 레이어를 강제합니다.</p>
+      <div class="grid2">
+        <div class="card">
+          <div class="tagline">Skill + Subagent + PPTX</div>
+          <h3>보호자 교육자료 생성 파이프라인</h3>
+          <p>주제·아동 연령·회기 수를 넣으면 서식 규칙(글자 크기·색·여백)이 고정된 슬라이드가 나오고, 별도 서브에이전트가 넘침·비율 붕괴를 검수합니다. Phase 3 완료 시점에 착수.</p>
+        </div>
+        <div class="card">
+          <div class="tagline">Agent SDK + MCP</div>
+          <h3>평가도구 데이터 도우미</h3>
+          <p>평가 원점수를 넣으면 해석·목표 초안을 만들고, MCP로 본인 자료 저장소를 읽습니다. 커스텀 도구·구조화 출력·권한 제어를 전부 씁니다. Phase 5에서 착수.</p>
+        </div>
+        <div class="card">
+          <div class="tagline">Plugin + Marketplace</div>
+          <h3>신입치료사 온보딩 플러그인</h3>
+          <p>기록 작성 규칙, 세션 노트 템플릿, 용어 검수 훅을 한 플러그인으로 묶어 배포. 남이 설치해 쓰는 순간 L5입니다. Phase 7의 핵심 산출물.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="traps">
+      <div class="phase-head"><div class="phase-tag">함정 · Common misreadings</div></div>
+      <h2>대부분이 여기서 잘못 이해합니다</h2>
+      <p class="phase-lede">각 항목은 Phase 2·3·6에서 직접 측정해 확인하게 됩니다. 지금은 "그렇다더라"로 읽고, 나중에 본인 숫자로 반박하거나 확인하세요.</p>
+      <div class="traps">
+        <div class="trap"><div class="x"><b>CLAUDE.md는 길수록 좋다.</b> <i>아니오.</i> 매 세션 전량 로드되어 비용이 되고, 지시가 많아질수록 개별 지시의 밀도가 떨어집니다. 짧고 절대적인 규칙 + 경로별 <span class="mono">rules/</span> 분할이 낫습니다.</div></div>
+        <div class="trap"><div class="x"><b>서브에이전트를 많이 띄우면 빨라진다.</b> <i>조건부.</i> 각 에이전트는 컨텍스트를 처음부터 다시 쌓고, 결과 병합 비용이 듭니다. 병렬 이득이 재구축 비용을 넘는 작업에만 씁니다.</div></div>
+        <div class="trap"><div class="x"><b>skill과 슬래시 커맨드는 다른 물건이다.</b> <i>같은 메커니즘입니다.</i> <span class="mono">commands/*.md</span>는 단일 파일, <span class="mono">skills/&lt;name&gt;/SKILL.md</span>는 보조 파일을 거느릴 수 있는 디렉터리 형태입니다.</div></div>
+        <div class="trap"><div class="x"><b>MCP 서버는 많이 붙일수록 좋다.</b> <i>아니오.</i> 연결된 도구의 스키마가 컨텍스트를 차지합니다. 도구 검색(tool search)으로 지연 로딩하는 구조를 이해해야 합니다.</div></div>
+        <div class="trap"><div class="x"><b>압축(compaction)은 무손실이다.</b> <i>아니오.</i> 무엇이 살아남고 무엇이 요약되는지 규칙이 있습니다. 살아남길 원하는 정보는 파일로 내보내야 합니다.</div></div>
+        <div class="trap"><div class="x"><b>권한을 넓게 열면 편하다.</b> <i>사고 반경이 넓어집니다.</i> 권한 모드·샌드박스·체크포인트는 셋이 한 세트로 설계되었습니다. 셋의 관계를 설명할 수 있어야 합니다.</div></div>
+        <div class="trap"><div class="x"><b>훅은 Claude가 실행한다.</b> <i>하네스가 실행합니다.</i> 그래서 훅은 결정적(deterministic)이고, "매번 반드시"가 필요한 규칙은 지시문이 아니라 훅이어야 합니다.</div></div>
+        <div class="trap"><div class="x"><b>프롬프트 캐시는 알아서 된다.</b> <i>앞부분이 흔들리면 전량 무효화됩니다.</i> 무엇이 프롬프트 앞쪽에 놓이는지 알면 비용이 절반이 됩니다.</div></div>
+        <div class="trap"><div class="x"><b>문서를 읽었으면 이해한 것이다.</b> <i>재현 실험이 없으면 L3까지입니다.</i> 이 커리큘럼이 실험을 매주 강제하는 이유입니다.</div></div>
+        <div class="trap"><div class="x"><b>버전 추종은 나중에 해도 된다.</b> <i>주 단위로 기능이 바뀝니다.</i> 변경 로그(changelog)가 이 도구의 1차 사료입니다. Phase 6에서 12개월치를 역주행합니다.</div></div>
+      </div>
+    </section>
+
+    <section class="block" id="notebook">
+      <div class="phase-head"><div class="phase-tag">도구 · Lab notebook</div></div>
+      <h2>실험 노트 규격</h2>
+      <p class="phase-lede">실험 1건 = 커밋 1건. 이 형식을 지키지 않은 실험은 나중에 재현할 수 없고, 재현할 수 없으면 근거가 되지 못합니다.</p>
+      <pre># EXP-014 · CLAUDE.md 분량이 도구 호출 수에 미치는 영향
+날짜        2026-03-11
+버전        claude-code x.y.z  /  model: opus
+가설        CLAUDE.md가 400줄일 때, 40줄일 때보다 초기 입력 토큰이
+            크게 늘지만 Read 호출 수는 유의하게 줄지 않을 것이다.
+조작        동일 과제("인증 모듈에 테스트 추가")를 A(0줄)/B(40줄)/C(400줄)
+            에서 각 3회. 매회 새 세션, 같은 커밋에서 시작.
+관찰        입력토큰 / 캐시read / 도구호출수 / 소요시간 / 결과 통과여부
+            A: ... B: ... C: ...
+결론        (한 문장)
+반증조건    이 결론이 틀렸다면 무엇이 관측되어야 하는가
+후속        EXP-015로 이어짐</pre>
+      <div class="status" id="status"></div>
+    </section>
+
+    <footer>
+      링크는 모두 공식 문서(code.claude.com/docs/ko)로 연결됩니다. 문서는 자주 갱신되므로,
+      Phase 6의 변경 로그 리뷰를 루틴으로 자동화해 커리큘럼 자체를 계속 최신으로 유지하세요.
+      이 페이지의 체크 상태는 저장되며, 다른 기기에서 열어도 이어집니다.
+    </footer>
+  </main>
+</div>
+<script>
+const D = "https://code.claude.com/docs/ko/";
+const PH = [
+ {id:"p0", n:"Phase 0", wk:"D-3 · 3일", t:"실험실을 먼저 짓는다",
+  lede:"측정 없이 읽기만 하면 L2에서 멈춥니다. 첫 사흘은 학습이 아니라 <b>학습을 측정할 장치</b>를 만드는 데 씁니다.",
+  items:[
+  {t:"네 개의 표면을 모두 설치한다", d:"터미널 CLI, VS Code 확장, 데스크톱 앱, 웹. 같은 엔진에 붙는 서로 다른 표면(surface)이라는 사실을 몸으로 확인합니다.", docs:[["overview","overview"],["setup","setup"],["vs-code","vs-code"],["desktop-quickstart","desktop-quickstart"],["web-quickstart","web-quickstart"]], c:"같은 CLAUDE.md·설정·MCP 서버가 네 표면에서 모두 읽히는지 직접 확인했는가?"},
+  {t:"claude-lab 리포지토리를 만든다", d:"모든 실험이 커밋으로 남는 전용 저장소. 실험별 브랜치, 결과는 exp/EXP-0xx.md로. 나중에 이 저장소 자체가 당신의 근거 자료가 됩니다.", docs:[["quickstart","quickstart"]], c:"실험 1건 = 커밋 1건 규칙을 문서화했는가?"},
+  {t:"실험 노트 규격을 확정한다", d:"가설 · 조작 · 관찰(토큰/시간/도구호출) · 결론 · 반증조건. 아래 '실험 노트 규격' 블록을 템플릿으로 복사합니다.", docs:[], c:"반증조건 칸을 비워두지 않을 자신이 있는가?"},
+  {t:"측정 도구를 손에 쥔다", d:"/context, /cost, --output-format json, 그리고 OpenTelemetry 설정 위치. 숫자를 볼 수 없으면 이후 모든 실험이 인상비평이 됩니다.", docs:[["monitoring-usage","monitoring-usage"],["costs","costs"],["cli-reference","cli-reference"]], c:"한 세션의 입력·출력·캐시 토큰을 각각 따로 말할 수 있는가?"},
+  {t:"문서 지도를 통독한다", d:"내용을 읽지 말고 목차만 1회 훑습니다. '무엇이 어디에 있는지'의 지도를 먼저 만드는 것이 목적입니다. 총 150여 편, 5개 대분류.", docs:[["docs 전체 목차","overview"],["glossary","glossary"]], c:"용어집(glossary)의 surface·harness·session을 자기 말로 구분할 수 있는가?"},
+ ]},
+
+ {id:"p1", n:"Phase 1", wk:"1–2주", t:"에이전틱 루프와 도구 표면",
+  lede:"클로드 코드는 대화창이 아니라 <b>루프</b>입니다. 모델이 도구를 부르고, 결과를 읽고, 다시 판단합니다. 이 루프의 각 마디를 손으로 만져보는 2주.",
+  items:[
+  {t:"에이전틱 루프를 해부한다", d:"모델 → 도구 호출 → 결과 → 재판단의 순환. 어디서 멈추고, 무엇이 루프를 끝내는지. 이 문서 하나를 세 번 읽을 값어치가 있습니다.", docs:[["how-claude-code-works","how-claude-code-works"]], c:"루프가 종료되는 조건을 세 가지 이상 댈 수 있는가?"},
+  {t:"내장 도구를 전수 조사한다", d:"Read·Write·Edit·Bash·Glob·Grep·Task·WebFetch·WebSearch·NotebookEdit 등. 각 도구를 <b>단독으로 강제 호출</b>해 입력·출력 형태를 눈으로 봅니다.", docs:[["tools-reference","tools-reference"]], c:"Glob과 Grep을 각각 언제 쓰는지, 왜 Bash의 find/grep보다 나은지 설명할 수 있는가?"},
+  {t:"권한 모델을 익힌다", d:"allow / ask / deny 규칙 문법과 매칭 방식. 도구 이름 + 인자 패턴으로 규칙을 쓰는 법.", docs:[["permissions","permissions"],["permission-modes","permission-modes"]], c:"Bash(git push:*) 같은 규칙이 어떤 호출을 잡고 어떤 것을 놓치는가?"},
+  {t:"샌드박스를 이해한다", d:"샌드박스된 Bash가 무엇을 막고 무엇을 허용하는지. 권한 모드와의 관계.", docs:[["sandboxing","sandboxing"],["sandbox-environments","sandbox-environments"]], c:"권한·샌드박스·체크포인트 셋이 하나의 안전 설계인 이유를 말할 수 있는가?"},
+  {t:"세션의 수명을 다룬다", d:"이어하기(resume), 분기(fork), 표면 간 이동(teleport, /desktop). 세션은 대화가 아니라 상태입니다.", docs:[["sessions","sessions"],["remote-control","remote-control"]], c:"분기한 세션 둘이 같은 작업트리를 건드릴 때 무슨 일이 생기는가?"},
+  {t:"체크포인트로 되감는다", d:"/rewind로 파일 변경을 되돌리는 범위와 한계. git과 무엇이 다른가.", docs:[["checkpointing","checkpointing"]], c:"체크포인트가 되돌리지 <b>못하는</b> 것 세 가지는?"},
+  {t:"대화형 모드와 명령을 장악한다", d:"모든 슬래시 커맨드를 카테고리로 분류하고, 단축키·붙여넣기·이미지 입력·플래그를 손에 익힙니다.", docs:[["interactive-mode","interactive-mode"],["commands","commands"],["cli-reference","cli-reference"],["keybindings","keybindings"]], c:"슬래시 커맨드 전체를 5개 이하의 범주로 묶어 설명할 수 있는가?"},
+  {t:"모델과 실행 모드를 고른다", d:"모델 선택, fast mode, plan mode, auto mode, advisor 도구. 각 모드가 루프의 어느 지점을 바꾸는지.", docs:[["model-config","model-config"],["fast-mode","fast-mode"],["permission-modes","permission-modes"],["auto-mode-config","auto-mode-config"],["advisor","advisor"]], c:"plan mode가 도구 호출을 어떻게 제약하는가?"},
+  {k:"lab", t:"실험 · 표현이 바뀌면 행동이 바뀐다", d:"동일한 목표를 세 가지 표현(명령형 / 목표 서술형 / 제약 명시형)으로 주고, 도구 호출 시퀀스·횟수·소요 토큰을 비교합니다. 각 3회 반복.", docs:[["best-practices","best-practices"],["prompt-library","prompt-library"]], c:"'지시하지 말고 위임하라'가 측정치로 확인되었는가, 반증되었는가?"},
+ ]},
+
+ {id:"p2", n:"Phase 2", wk:"3–4주", t:"컨텍스트 엔지니어링",
+  lede:"이 단계가 L2와 L4를 가릅니다. 컨텍스트 창은 한정된 예산이고, 설정 파일은 그 예산의 <b>고정 지출</b>입니다. 예산을 회계할 줄 알아야 합니다.",
+  items:[
+  {t:"컨텍스트 창을 해부한다", d:"세션 시작 시 무엇이 자동으로 들어오는가. 파일 읽기 한 번의 비용. 규칙과 훅이 언제 끼어드는가. 대화형 시뮬레이터가 있는 문서입니다.", docs:[["context-window","context-window"]], c:"빈 세션을 열었을 때 이미 차 있는 것들을 항목별로 나열할 수 있는가?"},
+  {t:"압축에서 살아남는 것을 파악한다", d:"컴팩션(compaction)이 무엇을 요약하고 무엇을 원문 그대로 남기는가. 살아남기를 원하는 정보는 어디에 둬야 하는가.", docs:[["context-window","context-window"],["sessions","sessions"]], c:"장시간 작업에서 잃으면 안 되는 결정사항을 어디에 적어둘 것인가?"},
+  {t:"프롬프트 캐싱을 회계한다", d:"무엇이 캐시되고, 어떤 행동이 캐시를 무효화하는가. 비용 곡선이 여기서 결정됩니다.", docs:[["prompt-caching","prompt-caching"],["costs","costs"]], c:"캐시 무효화를 일으키는 행동 다섯 가지를 댈 수 있는가?"},
+  {t:"CLAUDE.md를 설계한다", d:"짧고 절대적인 규칙. 지시가 아니라 <b>제약</b>을 씁니다. 프로젝트 스코프와 글로벌 스코프의 역할 분담.", docs:[["memory","memory"]], c:"현재 CLAUDE.md에서 지워도 결과가 안 바뀌는 줄이 몇 줄인가? (측정하세요)"},
+  {t:"rules/ 로 주제별·경로별 분할한다", d:".claude/rules/*.md 와 경로 게이팅. 항상 켜져 있을 필요 없는 규칙을 필요할 때만 켭니다.", docs:[["rules","memory"],["claude-directory","claude-directory"]], c:"경로 게이팅이 걸린 규칙이 실제로 언제 로드되는지 확인했는가?"},
+  {t:"자동 메모리를 관찰한다", d:"Claude가 세션을 넘어 스스로 남기는 메모. ~/.claude/projects/&lt;project&gt;/memory/ 를 직접 열어봅니다.", docs:[["auto memory","memory"],["claude-directory","claude-directory"]], c:"자동 메모리에 무엇이 쌓였는가? 그중 틀린 것은 없는가?"},
+  {t:".claude 디렉터리 15종 파일을 전수한다", d:"CLAUDE.md, rules/, settings.json, settings.local.json, .mcp.json, .worktreeinclude, skills/, commands/, output-styles/, agents/, workflows/, agent-memory/, ~/.claude.json, keybindings.json, themes/. 각각 커밋 대상인지 아닌지까지.", docs:[["claude-directory","claude-directory"]], c:"15종을 백지에서 나열하고 각각의 스코프(프로젝트/글로벌)를 맞출 수 있는가?"},
+  {t:"설정 우선순위를 외운다", d:"관리형 설정 → CLI 플래그 → settings.local.json → settings.json, 그리고 환경변수의 예외들. 조직 배포를 이해하는 열쇠입니다.", docs:[["settings","settings"],["settings-reference","settings-reference"],["managed-settings","managed-settings"],["env-vars","env-vars"]], c:"내 설정이 무시될 수 있는 경로를 세 가지 댈 수 있는가?"},
+  {t:"대형 코드베이스 전략을 읽는다", d:"모노레포에서 컨텍스트를 어떻게 나누는가. 지금 다루는 코드가 작아도, 전략의 논리는 그대로 문서·자료 관리에 적용됩니다.", docs:[["large-codebases","large-codebases"]], c:"파일을 '찾게' 할 것인가 '주어줄' 것인가의 판단 기준은?"},
+  {k:"lab", t:"실험 · CLAUDE.md 분량의 한계효용", d:"동일 과제를 A(0줄)/B(40줄)/C(400줄) 조건에서 각 3회. 입력 토큰·캐시 read·도구 호출 수·결과 통과 여부를 표로.", docs:[], c:"분량과 품질의 관계 곡선을 한 문장으로 요약할 수 있는가?"},
+  {k:"lab", t:"실험 · 컨텍스트 80% 지점의 선택지", d:"일부러 컨텍스트를 채우고 /compact, 새 세션+요약 인계, 파일로 내보내기 세 전략의 손실을 비교합니다.", docs:[["context-window","context-window"]], c:"각 전략에서 무엇을 잃었는지 구체적으로 적었는가?"},
+ ]},
+
+ {id:"p3", n:"Phase 3", wk:"5–6주", t:"확장 레이어 — 없는 기능을 만든다",
+  lede:"여기가 L3입니다. 다섯 개의 확장 수단(skill · subagent · hook · MCP · plugin)은 서로 대체재가 아니라 <b>다른 문제를 푸는 도구</b>입니다. 경계를 아는 것이 핵심.",
+  items:[
+  {t:"결정 트리를 먼저 세운다", d:"언제 CLAUDE.md, 언제 skill, 언제 subagent, 언제 hook, 언제 MCP, 언제 plugin인가. 각 기능의 컨텍스트 비용과 로딩 시점 비교표가 있는 문서.", docs:[["features-overview","features-overview"]], c:"다섯 수단을 '언제 로드되는가' 축으로 정렬할 수 있는가?"},
+  {t:"Skills를 만든다", d:"SKILL.md 구조, frontmatter, 점진적 공개(progressive disclosure). <b>description 한 줄이 트리거율을 결정합니다</b> — 이것이 skill 설계의 8할입니다.", docs:[["skills","skills"],["skill-creator 활용","skills"]], c:"설명문만 바꿔 트리거율을 올린 사례를 직접 만들었는가?"},
+  {t:"commands와 skills의 관계를 정리한다", d:"같은 메커니즘, 다른 형태. commands/*.md는 단일 파일, skills/&lt;name&gt;/SKILL.md는 보조 자료를 거느립니다.", docs:[["skills","skills"],["claude-directory","claude-directory"]], c:"단일 파일로 충분한 경우와 디렉터리가 필요한 경우를 구분할 수 있는가?"},
+  {t:"서브에이전트를 설계한다", d:"agents/*.md — 자체 시스템 프롬프트, 도구 제한, 컨텍스트 격리, 영속 메모리. 격리가 이득인가 손해인가를 매번 판단해야 합니다.", docs:[["sub-agents","sub-agents"],["agent-memory","sub-agents"]], c:"서브에이전트가 손해인 상황 세 가지를 댈 수 있는가?"},
+  {t:"훅으로 결정성을 확보한다", d:"모든 훅 이벤트 종류, 종료 코드 규약, 도구 호출을 <b>차단</b>하는 훅. '매번 반드시'가 필요한 규칙은 지시문이 아니라 훅입니다.", docs:[["hooks-guide","hooks-guide"],["hooks","hooks"]], c:"편집 후 자동 포맷·커밋 전 린트를 훅으로 실제 걸어봤는가?"},
+  {t:"MCP로 외부를 연결한다", d:"전송 방식(stdio/SSE/HTTP), 설치 스코프(local/project/user), 리소스와 프롬프트. .mcp.json으로 팀 공유.", docs:[["mcp-quickstart","mcp-quickstart"],["mcp","mcp"],["managed-mcp","managed-mcp"]], c:"MCP 서버를 하나 붙였을 때 컨텍스트가 얼마나 늘었는지 측정했는가?"},
+  {t:"출력 표면을 손본다", d:"output styles(시스템 프롬프트 섹션 교체), 상태줄, 테마, 전체화면, 음성 입력. 도구를 '내 것'으로 만드는 층.", docs:[["output-styles","output-styles"],["statusline","statusline"],["terminal-config","terminal-config"],["fullscreen","fullscreen"]], c:"출력 스타일이 CLAUDE.md와 어떻게 다르게 작동하는가?"},
+  {t:"플러그인으로 묶는다", d:"skill·agent·hook·MCP 설정을 하나로 포장해 배포. 남이 설치할 수 있는 단위가 되는 순간 성격이 달라집니다.", docs:[["plugins","plugins"],["plugins-reference","plugins-reference"],["discover-plugins","discover-plugins"]], c:"플러그인이 담을 수 있는 구성요소를 전부 나열할 수 있는가?"},
+  {k:"lab", t:"실험 · 같은 작업, 세 가지 구현", d:"'모든 문서에 용어 검수 적용'을 ① skill ② subagent ③ hook 세 방식으로 구현하고 재현성·비용·실패 양상을 비교합니다.", docs:[], c:"세 구현 중 어느 것이 '반드시 매번'을 보장하는가? 왜?"},
+  {k:"out", t:"산출물 · 본인 도메인 skill 3종", d:"예) 보호자 교육자료 초안, 세션 노트 정리, 평가 결과 해석 초안. 실제로 매주 쓰게 될 것만 만듭니다.", docs:[["skills","skills"]], c:"만든 skill을 다음 2주간 실제로 몇 번 썼는가? 안 썼다면 왜?"},
+ ]},
+
+ {id:"p4", n:"Phase 4", wk:"7–8주", t:"병렬 실행과 오케스트레이션",
+  lede:"한 세션이 한 사람이라면, 이 단계는 <b>팀 운영</b>입니다. 병렬화는 공짜가 아니고, 조율 비용을 넘어설 때만 이깁니다.",
+  items:[
+  {t:"병렬 에이전트를 띄운다", d:"여러 에이전트를 동시에 굴리고 한 화면에서 감시하는 법.", docs:[["agents","agents"],["agent-view","agent-view"]], c:"세 에이전트가 같은 파일을 만질 때 어떻게 막는가?"},
+  {t:"에이전트 팀을 조율한다", d:"리드 에이전트가 하위 작업을 배분하고 결과를 병합. 세션 간 메시지 전달.", docs:[["agent-teams","agent-teams"],["cross-session-messaging","cross-session-messaging"]], c:"조율 오버헤드가 이득을 잡아먹는 임계점을 관측했는가?"},
+  {t:"동적 워크플로우를 읽고 쓴다", d:"workflows/*.js — Claude가 작성해 저장하는 스크립트가 그대로 /명령이 됩니다. 대규모 서브에이전트 조율의 핵심.", docs:[["workflows","workflows"]], c:"워크플로우가 서브에이전트 직접 호출보다 나은 이유는?"},
+  {t:"worktree로 격리한다", d:"git worktree 기반 병렬 세션. .worktreeinclude로 gitignore된 파일을 복사해 넣는 법까지.", docs:[["worktrees","worktrees"]], c:".env가 없어서 새 worktree가 깨지는 문제를 어떻게 푸는가?"},
+  {t:"채널로 외부 이벤트를 밀어 넣는다", d:"Telegram·Discord·웹훅에서 실행 중인 세션으로 이벤트를 push.", docs:[["channels","channels"],["channels-reference","channels-reference"]], c:"세션을 깨우는 이벤트와 그냥 큐에 쌓이는 이벤트의 차이는?"},
+  {t:"일정과 지속 실행을 붙인다", d:"Routines(관리형 인프라, 컴퓨터가 꺼져 있어도), 데스크톱 예약 작업(로컬 파일 접근), /loop(세션 내 반복), goal(목표까지 계속).", docs:[["routines","routines"],["desktop-scheduled-tasks","desktop-scheduled-tasks"],["scheduled-tasks","scheduled-tasks"],["goal","goal"]], c:"세 가지 스케줄 수단을 '어디서 실행되는가' 기준으로 구분할 수 있는가?"},
+  {t:"자리를 떠서도 이어간다", d:"원격 제어, 모바일, Dispatch, teleport, Slack 라우팅. 세션이 표면에 묶이지 않는다는 설계 사상.", docs:[["remote-control","remote-control"],["mobile","mobile"],["claude-code-on-the-web","claude-code-on-the-web"],["slack","slack"]], c:"웹에서 시작한 작업을 터미널로 가져오면 무엇이 따라오고 무엇이 안 따라오는가?"},
+  {k:"lab", t:"실험 · 단일 세션 vs 3-에이전트 팀", d:"동일한 다중 파일 리팩터링을 두 방식으로. 소요 시간·총 토큰·결과 품질·재작업 횟수를 비교.", docs:[], c:"어느 쪽이 이겼는가? 조건이 바뀌면 결과가 뒤집히는 지점은 어디인가?"},
+ ]},
+
+ {id:"p5", n:"Phase 5", wk:"9–10주", t:"자동화와 프로그래밍 — 사람 없이 도는 클로드",
+  lede:"대화형 사용이 전부라고 생각하는 사람과, 파이프·CI·SDK로 <b>부품처럼 쓰는</b> 사람 사이의 격차가 여기서 벌어집니다.",
+  items:[
+  {t:"헤드리스로 파이프에 태운다", d:"claude -p, --output-format json, 표준입력 파이프. 유닉스 철학에 맞는 조립 가능한 부품으로 다루기.", docs:[["headless","headless"],["cli-reference","cli-reference"]], c:"로그를 파이프로 넣어 이상 징후를 뽑는 한 줄을 직접 썼는가?"},
+  {t:"딥링크로 세션을 띄운다", d:"링크 하나로 특정 프롬프트·설정의 세션을 시작. 팀 배포에 유용.", docs:[["deep-links","deep-links"]], c:"동료에게 '이 링크 누르면 바로 시작'을 만들어 보냈는가?"},
+  {t:"CI에 심는다", d:"GitHub Actions, GitLab CI/CD, 자동 코드 리뷰. PR마다 도는 리뷰어를 세웁니다.", docs:[["github-actions","github-actions"],["code-review","code-review"],["gitlab-ci-cd","gitlab-ci-cd"]], c:"CI에서 도는 Claude와 로컬 세션의 권한 차이는 무엇인가?"},
+  {t:"보안 검사를 붙인다", d:"작성 중 보안 이슈 포착, 코드베이스 취약점 스캔, ultrareview로 버그 찾기.", docs:[["security-guidance","security-guidance"],["claude-security","claude-security"],["ultrareview","ultrareview"]], c:"보안 가이드가 언제 개입하는가 — 작성 중인가, 검토 시점인가?"},
+  {t:"Agent SDK에 착수한다", d:"CLI가 아니라 라이브러리로 클로드 코드의 엔진을 쓰는 길. 오케스트레이션·도구 접근·권한을 전부 직접 통제합니다.", docs:[["agent-sdk/overview","agent-sdk/overview"],["agent-sdk/quickstart","agent-sdk/quickstart"],["agent-sdk/agent-loop","agent-sdk/agent-loop"]], c:"CLI로 될 일과 SDK가 필요한 일의 경계선을 한 문장으로 그을 수 있는가?"},
+  {t:"SDK의 세션과 입출력을 다룬다", d:"세션 관리와 외부 저장소 영속화, 스트리밍 입출력, 승인 처리, 구조화 출력.", docs:[["agent-sdk/sessions","agent-sdk/sessions"],["agent-sdk/session-storage","agent-sdk/session-storage"],["agent-sdk/streaming-output","agent-sdk/streaming-output"],["agent-sdk/structured-outputs","agent-sdk/structured-outputs"]], c:"세션을 DB에 영속화해야 하는 이유가 생기는 시점은?"},
+  {t:"SDK를 확장한다", d:"커스텀 도구, MCP 연결, 도구가 많아질 때의 tool search, SDK 안의 서브에이전트·skill·plugin.", docs:[["agent-sdk/custom-tools","agent-sdk/custom-tools"],["agent-sdk/tool-search","agent-sdk/tool-search"],["agent-sdk/subagents","agent-sdk/subagents"],["agent-sdk/skills","agent-sdk/skills"]], c:"도구 수가 늘 때 컨텍스트가 어떻게 되는가, tool search가 그걸 어떻게 푸는가?"},
+  {t:"SDK를 통제하고 관측한다", d:"권한 콜백, 훅으로 행동 가로채기, 체크포인트, 비용 추적, OpenTelemetry.", docs:[["agent-sdk/permissions","agent-sdk/permissions"],["agent-sdk/hooks","agent-sdk/hooks"],["agent-sdk/cost-tracking","agent-sdk/cost-tracking"],["agent-sdk/observability","agent-sdk/observability"],["agent-sdk/secure-deployment","agent-sdk/secure-deployment"]], c:"에이전트를 남에게 열어줄 때 반드시 막아야 할 것 다섯 가지는?"},
+  {k:"out", t:"산출물 · SDK 에이전트 1개", d:"평가 데이터 도우미(캡스톤 2)를 SDK로 구현. 커스텀 도구 2개 + 구조화 출력 + 권한 콜백을 반드시 포함시킵니다.", docs:[["agent-sdk/examples","agent-sdk/examples"]], c:"이 에이전트를 내일 동료에게 줘도 사고가 안 나는가?"},
+ ]},
+
+ {id:"p6", n:"Phase 6", wk:"11–12주", t:"해부 — 남이 못 보는 층을 본다",
+  lede:"여기부터가 진짜 차별점입니다. 문서는 누구나 읽습니다. <b>로그를 파싱하고, 실패를 카탈로그로 만들고, 설계 의도를 서술하는</b> 사람은 드뭅니다.",
+  items:[
+  {t:"세션 로그를 직접 파싱한다", d:"~/.claude/projects/**/*.jsonl 을 열어 실제 메시지·도구 스키마·토큰 회계를 눈으로 봅니다. 문서가 설명하지 않는 것이 여기 다 있습니다.", docs:[["claude-directory","claude-directory"],["data-usage","data-usage"]], c:"한 세션의 턴별 입력·캐시read·캐시write·출력 토큰을 스크립트로 뽑아냈는가?"},
+  {t:"토큰 회계를 재구성한다", d:"청구서와 로그가 맞아떨어지는지 직접 대조. 캐시가 실제로 언제 히트했는지 확인.", docs:[["costs","costs"],["prompt-caching","prompt-caching"],["monitoring-usage","monitoring-usage"]], c:"내 지난 한 달 비용의 최대 지출 항목이 무엇이었는가?"},
+  {t:"관측 체계를 세운다", d:"OpenTelemetry 지표 내보내기, 팀 사용량 분석. 감으로 말하지 않게 되는 지점.", docs:[["monitoring-usage","monitoring-usage"],["analytics","analytics"]], c:"대시보드에서 어떤 지표를 보고 개입을 결정할 것인가?"},
+  {t:"보안·데이터 모델을 파악한다", d:"데이터가 어디로 가고 얼마나 남는가. 제로 데이터 보존. 임상 정보를 다루는 사람에게는 선택이 아니라 필수입니다.", docs:[["security","security"],["data-usage","data-usage"],["zero-data-retention","zero-data-retention"]], c:"환자 식별정보가 들어가면 안 되는 경로를 전부 지목할 수 있는가?"},
+  {t:"조직 배포 설계를 읽는다", d:"관리형 설정, 서버 관리 설정, 게이트웨이, 네트워크 구성. <b>왜</b> 우선순위가 그렇게 짜였는지를 묻습니다.", docs:[["admin-setup","admin-setup"],["managed-settings","managed-settings"],["server-managed-settings","server-managed-settings"],["gateways","gateways"],["network-config","network-config"]], c:"조직이 절대 못 뚫게 막아야 하는 설정과, 개인이 반드시 바꿀 수 있어야 하는 설정의 경계는?"},
+  {t:"실패를 카탈로그로 만든다", d:"오류 레퍼런스 전 항목을 읽고, 재현 가능한 것은 <b>일부러 재현</b>합니다. 문제 해결·설정 디버깅 문서까지.", docs:[["errors","errors"],["troubleshooting","troubleshooting"],["debug-your-config","debug-your-config"],["troubleshoot-install","troubleshoot-install"]], c:"동료가 던진 오류 메시지를 보고 3분 안에 원인 범주를 지목할 수 있는가?"},
+  {t:"변경 로그를 12개월 역주행한다", d:"릴리스 노트를 거꾸로 읽으며 '이 기능은 어떤 문제를 풀려고 추가됐나'를 매 항목 서술합니다. 이 도구의 1차 사료입니다.", docs:[["changelog","changelog"],["feature-availability","feature-availability"]], c:"최근 1년의 방향성을 세 문장으로 요약할 수 있는가?"},
+  {k:"lab", t:"실험 · 모델·모드 A/B 벤치마크", d:"고정된 과제 5개 세트를 만들고 모델·fast mode·plan mode·auto mode 조합으로 돌려 통과율·비용·시간을 표로. 이후 버전이 올라갈 때마다 재실행합니다.", docs:[["model-config","model-config"],["fast-mode","fast-mode"]], c:"이 벤치마크를 반복 실행 가능한 스크립트로 만들었는가?"},
+  {k:"out", t:"산출물 · 설계 의도 서술 3편", d:"'왜 훅은 하네스가 실행하는가', '왜 skill과 command가 같은 메커니즘인가', '왜 관리형 설정이 최우선인가'. 각 1500자.", docs:[], c:"세 편을 읽은 사람이 문서를 안 읽고도 그 부분을 설명할 수 있게 썼는가?"},
+ ]},
+
+ {id:"p7", n:"Phase 7", wk:"13주~ 계속", t:"전수 — 배포하고, 가르치고, 최신을 유지한다",
+  lede:"L5는 끝나는 단계가 아니라 <b>유지하는 상태</b>입니다. 도구가 매주 바뀌므로, 이해도 매주 갱신돼야 합니다.",
+  items:[
+  {t:"플러그인을 마켓플레이스에 배포한다", d:"마켓플레이스 생성, 의존성 버전 제약, CLI에서의 추천. 남이 설치해 쓰는 순간 이해가 검증됩니다.", docs:[["plugin-marketplaces","plugin-marketplaces"],["plugin-dependencies","plugin-dependencies"],["plugin-hints","plugin-hints"]], c:"설치한 사람이 README 없이 쓸 수 있는가?"},
+  {t:"벤치마크 스위트를 유지한다", d:"Phase 6의 A/B 스크립트를 버전이 오를 때마다 돌리고 결과를 저장소에 누적합니다. 시계열이 쌓이면 아무도 못 가진 자료가 됩니다.", docs:[["changelog","changelog"]], c:"3개 버전 이상의 시계열이 쌓였는가?"},
+  {t:"릴리스 워치를 자동화한다", d:"Routine으로 매주 변경 로그를 읽고 요약·영향도 평가를 자동 생성. 커리큘럼 자체가 스스로 갱신되게 만듭니다.", docs:[["routines","routines"]], c:"이 루틴이 3주 연속 유용한 출력을 냈는가?"},
+  {t:"글 12편 · 강의 2회", d:"매달 1편, 분기별 강의 1회. 신입치료사 대상 실무 강의 + 개발자 대상 심화 강의로 청중을 두 종류로 갈라야 이해의 구멍이 드러납니다.", docs:[["communications-kit","communications-kit"],["champion-kit","champion-kit"]], c:"두 청중에게 같은 개념을 다른 언어로 설명해봤는가?"},
+  {t:"생태계에 기여한다", d:"skill-creator로 skill을 다듬어 공개, 문서의 부정확한 부분·오류 재현 사례를 정리해 피드백. 받는 쪽에서 주는 쪽으로.", docs:[["discover-plugins","discover-plugins"],["skills","skills"]], c:"공개한 것 중 남이 실제로 쓴 것이 있는가?"},
+ ]},
+];
+
+/* ---------- render ---------- */
+const esc = s => s;
+const root = document.getElementById("phases");
+const navEl = document.getElementById("nav");
+let ALL = [];
+
+PH.forEach((p, pi) => {
+  const sec = document.createElement("section");
+  sec.className = "phase"; sec.id = p.id;
+  const items = p.items.map((it, ii) => {
+    const id = p.id + "-" + ii;
+    ALL.push(id);
+    const badge = it.k === "lab" ? '<span class="kind lab">실험</span>'
+                : it.k === "out" ? '<span class="kind out">산출물</span>' : "";
+    const docs = (it.docs || []).map(d =>
+      '<a href="' + D + d[1] + '" target="_blank" rel="noopener">' + d[0] + '</a>').join("");
+    return '<label class="item" data-id="' + id + '">' +
+      '<input type="checkbox" class="box" data-id="' + id + '">' +
+      '<span><span class="it">' + badge + esc(it.t) + '</span>' +
+      '<span class="id">' + it.d + '</span>' +
+      (docs ? '<span class="docs">' + docs + '</span>' : '') +
+      (it.c ? '<span class="check"><b>통과 기준</b>' + it.c + '</span>' : '') +
+      '</span></label>';
+  }).join("");
+  sec.innerHTML =
+    '<div class="phase-head"><div class="phase-tag"><span>' + p.n + '</span><b>' + p.wk + '</b></div></div>' +
+    '<h2>' + p.t + '</h2><p class="phase-lede">' + p.lede + '</p>' +
+    '<div class="items">' + items + '</div>';
+  root.appendChild(sec);
+
+  const a = document.createElement("a");
+  a.href = "#" + p.id;
+  a.innerHTML = '<span class="n">' + (pi) + '</span><span>' + p.t.split(" — ")[0] + '</span><span class="c" id="c-' + p.id + '">0/' + p.items.length + '</span>';
+  navEl.appendChild(a);
+});
+
+document.getElementById("allcount").textContent = ALL.length;
+
+/* ---------- state ---------- */
+let done = {};
+let store = null;
+const statusEl = document.getElementById("status");
+const CIRC = 2 * Math.PI * 16;
+
+function paint(){
+  let n = 0;
+  document.querySelectorAll(".box").forEach(b => {
+    const on = !!done[b.dataset.id];
+    b.checked = on;
+    b.closest(".item").classList.toggle("on", on);
+    if (on) n++;
+  });
+  PH.forEach(p => {
+    const c = p.items.filter((_, ii) => done[p.id + "-" + ii]).length;
+    const el = document.getElementById("c-" + p.id);
+    if (el) el.textContent = c + "/" + p.items.length;
+  });
+  const pct = ALL.length ? Math.round(n / ALL.length * 100) : 0;
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("donecount").textContent = n;
+  document.getElementById("ring").setAttribute("stroke-dasharray", (CIRC * pct / 100).toFixed(2) + " " + CIRC.toFixed(2));
+}
+
+function readLocal(){
+  try { return JSON.parse(localStorage.getItem("cc-mastery") || "{}"); } catch (e) { return {}; }
+}
+function writeLocal(){
+  try { localStorage.setItem("cc-mastery", JSON.stringify(done)); } catch (e) {}
+}
+
+done = readLocal();
+paint();
+
+let saveTimer = null;
+function save(){
+  writeLocal();
+  if (!store) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    store.set({ done: done, updatedAt: new Date().toISOString() })
+      .then(() => { statusEl.textContent = "저장됨 · " + new Date().toLocaleTimeString("ko-KR"); })
+      .catch(err => { statusEl.textContent = "저장 실패 (" + (err && err.code || "unknown") + ") · 이 브라우저에는 보관됨"; });
+  }, 500);
+}
+
+document.addEventListener("change", e => {
+  const b = e.target.closest(".box");
+  if (!b) return;
+  if (b.checked) done[b.dataset.id] = true; else delete done[b.dataset.id];
+  paint();
+  save();
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("모든 진행 상태를 지웁니다. 계속할까요?")) return;
+  done = {}; paint(); save();
+});
+
+/* ---------- persistence ---------- */
+(async () => {
+  if (!window.claude || !window.claude.use) return;
+  let db = null;
+  try { db = await window.claude.use("db"); } catch (e) { db = null; }
+  if (!db) return;
+  store = db.doc("progress/main");
+  store.onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (d && d.done && typeof d.done === "object" && !snap.metadata.hasPendingWrites) {
+      done = Object.assign({}, d.done);
+      writeLocal();
+      paint();
+    }
+  }, err => { statusEl.textContent = "동기화 중단 (" + err.code + ") · 이 브라우저에는 계속 보관됩니다"; });
+  statusEl.textContent = "진행 상태 동기화 활성";
+})();
+</script>
