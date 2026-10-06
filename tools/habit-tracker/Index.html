@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<style>
+  :root{--line:#e3e0da;--muted:#6b675f;--bg:#f6f5f2;--card:#fff;--ink:#111;
+        --run:#2f7d5b;--read:#3a62b8;--book:#a8642a;--track:#ece9e3}
+  @media (prefers-color-scheme:dark){
+    :root{--line:#33312d;--muted:#a19c92;--bg:#151412;--card:#1f1e1b;--ink:#f2f0ec;
+          --run:#5cbf92;--read:#7d9df0;--book:#e09a5c;--track:#2c2a26}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,"Noto Sans KR","Malgun Gothic",Roboto,sans-serif;font-size:15px;line-height:1.45}
+  header{padding:18px 16px 6px;max-width:560px;margin:0 auto}
+  header h1{margin:0;font-size:20px;font-weight:800}
+  header p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+  main{padding:10px 16px 40px;max-width:560px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+  .top{display:flex;justify-content:space-between;align-items:baseline}
+  .name{font-size:16px;font-weight:800}
+  .count{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  .count small{font-size:15px;color:var(--muted);font-weight:700}
+  .dots{display:flex;gap:8px;margin:10px 0 8px}
+  .dot{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--c);}
+  .dot.on{background:var(--c)}
+  .msg{font-size:14px;font-weight:700;color:var(--c)}
+  .sub{font-size:13px;color:var(--muted);margin-top:4px}
+  .bar{position:relative;height:14px;border-radius:7px;background:var(--track);margin:12px 0 8px;overflow:visible}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--c)}
+  .bar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55}
+  .warn{background:#fff6e0;border-color:#ecd59a;color:#6b4e00;font-size:13.5px}
+  @media (prefers-color-scheme:dark){.warn{background:#2e2716;border-color:#5a4a1f;color:#ecd59a}}
+  button{width:100%;font-family:inherit;font-weight:800;font-size:16px;border-radius:12px;padding:15px;
+         border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  .center{text-align:center;color:var(--muted);padding:40px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>습관기록</h1>
+  <p id="when">불러오는 중…</p>
+</header>
+<main id="app"><div class="center">시트에서 기록을 읽고 있어요…</div></main>
+
+<script>
+var COLORS = { '운동': 'var(--run)', '독서': 'var(--read)', '책 완독': 'var(--book)' };
+var DAY = 86400000;
+
+function parse(s) { var p = s.split('-'); return Date.UTC(+p[0], p[1] - 1, +p[2]); }
+function fmt(t) { var d = new Date(t); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); }
+function weekStart(t) { var wd = (new Date(t).getUTCDay() + 6) % 7; return t - wd * DAY; } // 월요일 시작
+
+// 그 주(월~일)에 해당 항목을 한 날짜 수. 하루 여러 번은 1회로 센다.
+function weekCount(records, item, ws) {
+  var days = {};
+  records.forEach(function (r) {
+    var t = parse(r.date);
+    if (r.item === item && t >= ws && t < ws + 7 * DAY) days[r.date] = 1;
+  });
+  return Object.keys(days).length;
+}
+
+function compute(data) {
+  var today = parse(data.today);
+  var ws = weekStart(today);
+  var year = +data.today.slice(0, 4);
+  var known = {};
+  var weekly = [], yearly = [];
+
+  data.goals.forEach(function (g) {
+    known[g.item] = 1;
+    if (g.period === '주') {
+      var now = weekCount(data.records, g.item, ws);
+      var past = [1, 2, 3, 4].map(function (k) { return weekCount(data.records, g.item, ws - k * 7 * DAY); });
+      var avg = past.reduce(function (a, b) { return a + b; }, 0) / 4;
+      var streak = 0;
+      for (var k = 1; k <= 520; k++) {
+        if (weekCount(data.records, g.item, ws - k * 7 * DAY) >= g.target) streak++; else break;
+      }
+      if (now >= g.target) streak++;
+      weekly.push({ item: g.item, target: g.target, now: now, avg: avg, streak: streak });
+    } else if (g.period === '연') {
+      var n = g.prior + data.records.filter(function (r) {
+        return r.item === g.item && +r.date.slice(0, 4) === year;
+      }).length;
+      var y0 = Date.UTC(year, 0, 1), y1 = Date.UTC(year + 1, 0, 1);
+      var pace = g.target * (today - y0 + DAY) / (y1 - y0);
+      yearly.push({ item: g.item, target: g.target, now: n, pace: pace });
+    }
+  });
+
+  var unknown = {};
+  data.records.forEach(function (r) { if (!known[r.item]) unknown[r.item] = (unknown[r.item] || 0) + 1; });
+
+  return { today: today, ws: ws, weekly: weekly, yearly: yearly, unknown: unknown };
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+function render(data) {
+  var s = compute(data);
+  var d = new Date(s.today);
+  var wd = '일월화수목금토'[d.getUTCDay()];
+  document.getElementById('when').textContent =
+    (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일 (' + wd + ') · 이번 주 ' + fmt(s.ws) + '~' + fmt(s.ws + 6 * DAY);
+
+  var html = '';
+  s.weekly.forEach(function (w) {
+    var c = COLORS[w.item] || 'var(--ink)';
+    var dots = '';
+    for (var i = 0; i < Math.max(w.target, w.now); i++) dots += '<span class="dot' + (i < w.now ? ' on' : '') + '"></span>';
+    var msg = w.now >= w.target ? '이번 주 목표 달성!' : '앞으로 ' + (w.target - w.now) + '회 남았어요';
+    var sub = '최근 4주 평균 ' + (Math.round(w.avg * 10) / 10) + '회';
+    if (w.streak > 0) sub += ' · ' + w.streak + '주 연속 달성';
+    html += '<div class="card" style="--c:' + c + '">' +
+      '<div class="top"><span class="name">' + esc(w.item) + ' <small style="color:var(--muted);font-weight:600">주 ' + w.target + '회</small></span>' +
+      '<span class="count">' + w.now + '<small> / ' + w.target + '회</small></span></div>' +
+      '<div class="dots">' + dots + '</div>' +
+      '<div class="msg">' + msg + '</div><div class="sub">' + sub + '</div></div>';
+  });
+
+  s.yearly.forEach(function (y) {
+    var c = COLORS[y.item] || 'var(--ink)';
+    var pct = Math.min(100, y.now / y.target * 100);
+    var pacePct = Math.min(100, y.pace / y.target * 100);
+    var msg = y.now >= y.target ? '올해 목표 달성!'
+      : y.now >= y.pace ? '진도보다 앞서 있어요'
+      : '진도까지 ' + (Math.ceil((y.pace - y.now) * 10) / 10) + '권 남았어요';
+    html += '<div class="card" style="--c:' + c + '">' +
+      '<div class="top"><span class="name">' + esc(y.item) + ' <small style="color:var(--muted);font-weight:600">올해 ' + y.target + '권</small></span>' +
+      '<span class="count">' + y.now + '<small> / ' + y.target + '권</small></span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i><b style="left:' + pacePct + '%"></b></div>' +
+      '<div class="msg">' + msg + '</div><div class="sub">오늘 기준 진도 ' + (Math.round(y.pace * 10) / 10) + '권 (막대의 세로선)</div></div>';
+  });
+
+  var names = Object.keys(s.unknown);
+  if (names.length) {
+    html += '<div class="card warn">목표에 없는 항목이 기록에 있어요: ' +
+      names.map(function (n) { return '"' + esc(n) + '" ' + s.unknown[n] + '건'; }).join(', ') +
+      '. 집계에서 빠졌으니 시트에서 항목 이름을 고쳐 주세요.</div>';
+  }
+  if (!s.weekly.length && !s.yearly.length) {
+    html += '<div class="card warn">"목표" 탭에서 목표를 찾지 못했어요. 주기 칸은 "주" 또는 "연"이어야 해요.</div>';
+  }
+  html += '<button onclick="load()">새로고침</button>';
+  document.getElementById('app').innerHTML = html;
+}
+
+function fail(e) {
+  document.getElementById('when').textContent = '불러오지 못했어요';
+  document.getElementById('app').innerHTML = '<div class="card warn">' + esc(e && e.message || e) +
+    '</div><button onclick="load()">다시 시도</button>';
+}
+
+function load() {
+  document.getElementById('app').innerHTML = '<div class="center">시트에서 기록을 읽고 있어요…</div>';
+  google.script.run.withSuccessHandler(render).withFailureHandler(fail).getData();
+}
+
+load();
+</script>
+</body>
+</html>
