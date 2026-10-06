@@ -10,7 +10,8 @@ function doGet() {
 // 화면이 부르는 함수. 계산은 화면(Index.html)에서 한다.
 function getData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tz = ss.getSpreadsheetTimeZone();
+  // 시트에 시간대가 비어 있으면(다른 앱이 만든 시트에서 생김) 서울 시간으로 본다.
+  const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone() || 'Asia/Seoul';
   const recSheet = ss.getSheetByName('기록');
   const goalSheet = ss.getSheetByName('목표');
   if (!recSheet || !goalSheet) {
